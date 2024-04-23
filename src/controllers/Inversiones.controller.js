@@ -1,0 +1,221 @@
+import { pool } from "../database/conexion.js";
+import { validationResult } from 'express-validator';
+export const listarInversiones = async (req, res) => {
+    try {
+        let sql = `
+            SELECT 
+                inver.id_inversiones AS id_inversiones,
+                l.nombre AS nombre_lote, 
+                cu.id_cultivo,
+                cu.fecha_inicio AS fecha_siembra_cultivo,
+                cu.cantidad_sembrada,
+                v.nombre_variedad    AS nombre_variedad,
+                pro.fecha_inicio AS pro_fecha_inicio, 
+                pro.fecha_fin AS pro_fecha_fin, 
+                inver.fk_id_programacion AS id_programacion, 
+                inver.fk_id_costos AS id_costos, 
+                c.precio AS recur_precio, 
+                tr.cantidad_medida AS recur_cantidad_medida, 
+                SUM(a.valor_actividad) AS valor_actividad, 
+                (c.precio * tr.cantidad_medida + SUM(a.valor_actividad)) AS valor_inversion
+            FROM 
+                inversiones AS inver 
+                JOIN programacion AS pro ON inver.fk_id_programacion = pro.id_programacion 
+                JOIN costos AS c ON inver.fk_id_costos = c.id_costos 
+                JOIN tipo_recursos AS tr ON c.fk_id_tipo_recursos = tr.id_tipo_recursos 
+                JOIN actividad AS a ON pro.fk_id_actividad = a.id_actividad
+                JOIN cultivo AS cu ON pro.fk_id_cultivo = cu.id_cultivo
+                JOIN lotes AS l ON cu.fk_id_lote = l.id_lote
+                JOIN variedad AS v ON cu.fk_id_variedad = v.id_variedad
+            GROUP BY 
+                inver.id_inversiones`;
+
+        const [result] = await pool.query(sql);
+
+        if (result.length > 0) {
+            res.status(200).json(result);
+        } else {
+            res.status(400).json({ status: 400, message: 'No hay ninguna inversión' });
+        }
+    } catch (error) {
+        res.status(500).json({ status: 500, message: 'Error en el servidor: ' + error });
+    }
+};
+
+
+export const registrarInversiones = async (req, res) => {
+    try {
+        const error = validationResult(req);
+
+        if (!error.isEmpty()) {
+            return res.status(400).json({
+                errors: error.array()
+            });
+        }
+
+        const { fk_id_programacion, fk_id_costos } = req.body;
+
+        const [costoExist] = await pool.query('SELECT * FROM costos WHERE id_costos = ?', [fk_id_costos]);
+
+        if (costoExist.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Id costo no existe. Registre primero un costo.'
+            });
+        }
+
+        const [loteExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ?', [fk_id_programacion]);
+
+        if (loteExist.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'La programación no existe. Registre primero una programación.'
+            });
+        }
+
+        const [costoInfo] = await pool.query('SELECT precio FROM costos WHERE id_costos = ?', [fk_id_costos]);
+        const [tipoRecursoInfo] = await pool.query('SELECT cantidad_medida FROM tipo_recursos WHERE id_tipo_recursos = ?', [fk_id_costos]);
+
+        const precio = costoInfo[0].precio;
+        const cantidadMedida = tipoRecursoInfo[0].cantidad_medida;
+        const valor_inversion = precio * cantidadMedida;
+
+        const [Registrar] = await pool.query('INSERT INTO inversiones (fk_id_programacion, fk_id_costos, valor_inversion) VALUES (?, ?, ?)', [fk_id_programacion, fk_id_costos, valor_inversion]);
+
+        if (Registrar.affectedRows > 0) {
+            res.status(200).json({
+                status: 200,
+                message: 'Se registró correctamente'
+            });
+        } else {
+            res.status(400).json({
+                status: 400,
+                message: 'Campo obligatorio'
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'Error en el servidor',
+            error: error.message
+        });
+    }
+};
+
+
+export const actualizarInversiones = async (req, res) => {
+    try {
+        const error = validationResult(req);
+        if (!error.isEmpty()) {
+            return res.status(400).json({ error: error.array() });
+        }
+
+        const { id_inversiones } = req.params;
+        const { fk_id_costos, fk_id_programacion } = req.body;
+
+        if (fk_id_costos) {
+            const [costoExist] = await pool.query('SELECT * FROM costos WHERE id_costos = ?', [fk_id_costos]);
+            if (costoExist.length === 0) {
+                return res.status(404).json({
+                    status: 404,
+                    message: 'Id costo no existe. Registre primero un costo.'
+                });
+            }
+        }
+
+        if (fk_id_programacion) {
+            const [programacionExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ?', [fk_id_programacion]);
+            if (programacionExist.length === 0) {
+                return res.status(404).json({
+                    status: 404,
+                    message: 'La programacion no existe. Registre primero una programacion.'
+                });
+            }
+        }
+
+        const [inversionExist] = await pool.query('SELECT * FROM inversiones WHERE id_inversiones=?', [id_inversiones]);
+
+        if (inversionExist.length === 0) {
+            return res.status(400).json({ status: 400, message: 'Inversion no encontrada.' });
+        }
+
+        const updateValues = {
+            fk_id_costos: fk_id_costos || inversionExist[0].fk_id_costos,
+            fk_id_programacion: fk_id_programacion || inversionExist[0].fk_id_programacion
+        };
+
+        const updateQuery = 'UPDATE inversiones SET fk_id_costos=?, fk_id_programacion=? WHERE id_inversiones=?';
+
+        const [result] = await pool.query(updateQuery, [updateValues.fk_id_costos, updateValues.fk_id_programacion, id_inversiones]);
+
+        if (result.affectedRows > 0) {
+            res.status(200).json({
+                mensaje: 'Ha sido actualizado.'
+            });
+        } else {
+            res.status(400).json({
+                status: 400,
+                message: 'No se encontraron resultados para la actualización.'
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            status: 500,
+            message: 'Error en el servidor.',
+            error: error.message
+        });
+    }
+};
+
+
+export const BuscarInversiones = async (req, res) => {
+    try {
+        const { id_inversiones } = req.params;
+        const consultar = `
+        SELECT 
+        inver.id_inversiones AS id_inversiones,
+        l.nombre AS nombre_lote, 
+        cu.id_cultivo,
+        cu.fecha_inicio AS fecha_siembra_cultivo,
+        cu.cantidad_sembrada,
+        v.nombre_variedad    AS nombre_variedad,
+        pro.fecha_inicio AS pro_fecha_inicio, 
+        pro.fecha_fin AS pro_fecha_fin, 
+        inver.fk_id_programacion AS id_programacion, 
+        inver.fk_id_costos AS id_costos, 
+        c.precio AS recur_precio, 
+        tr.cantidad_medida AS recur_cantidad_medida, 
+        SUM(a.valor_actividad) AS valor_actividad, 
+        (c.precio * tr.cantidad_medida + SUM(a.valor_actividad)) AS valor_inversion
+    FROM 
+        inversiones AS inver 
+        JOIN programacion AS pro ON inver.fk_id_programacion = pro.id_programacion 
+        JOIN costos AS c ON inver.fk_id_costos = c.id_costos 
+        JOIN tipo_recursos AS tr ON c.fk_id_tipo_recursos = tr.id_tipo_recursos 
+        JOIN actividad AS a ON pro.fk_id_actividad = a.id_actividad
+        JOIN cultivo AS cu ON pro.fk_id_cultivo = cu.id_cultivo
+        JOIN lotes AS l ON cu.fk_id_lote = l.id_lote
+        JOIN variedad AS v ON cu.fk_id_variedad = v.id_variedad
+            WHERE 
+                inver.id_inversiones = ?`;
+        
+        const [resultado] = await pool.query(consultar, [id_inversiones]);
+
+        if (resultado.length > 0) {
+            // Recalcular el valor de inversión
+            resultado[0].valor_inversion = resultado[0].precio * resultado[0].cantidad_medida + resultado[0].suma_actividad;
+            res.status(200).json(resultado[0]);
+        } else {
+            res.status(404).json({
+                status: 404,
+                message: "No se encontraron resultados",
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: "Error en el servidor",
+            error: error.message,
+        });
+    }
+};

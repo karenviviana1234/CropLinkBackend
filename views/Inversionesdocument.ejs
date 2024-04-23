@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    //nn
+    <h1>INVERSIONES</h1>
+    <hr>
+    <h3>Requerimiento 1. Documentacion ENDPOINT REGISTRAR INVERSIONES</h3>
+    <table>
+        <tr><td>Número</td> <td>1</td></tr>
+        <tr><td>Nombre del Servicio</td> <td>Registrar inversiones</td></tr>
+        <tr><td>URL</td>  <td>/registrarInversiones</td></tr>
+        <tr><td>Descripción</td>  <td>Permite registrar una nueva inversion en la base de datos</td></tr>
+        <tr><td>Metodo HTTP</td>  <td>POST</td></tr>
+        <tr><td>Usuarios</td><td>Administrador</td></tr>
+        <tr><td>Header</td>  <td>token:token</td></tr>
+        <tr><td>Request json</td>  <td>{
+            "fk_id_costos":1,
+            "egresos":8000,
+            "fk_id_programacion":3
+        }</td></tr>
+        <tr><td>Respuesta json</td>  <td>   
+        Correcto: 
+        Status: 200
+        json:
+        { 
+            "status": 200,
+            "message": "se Registró correctamente",
+        }
+
+        <tr><td>Respuesta json</td>  <td>   
+            validacion: 
+            Status: 400
+            json:
+            { 
+                "status": 400,
+                "message": "campos obligatorios",
+            }
+    <br>
+    Incorrecto:
+    
+    Status:  400
+    body:{
+        "status":  403,
+        "message" : "No se ha podido registrar"
+    }
+    <br>
+    Error: 
+    
+    Status: 500 
+    json: {
+        status: 500,
+        "message" : "error en el servidor"
+    }
+    </td></tr>
+    <tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+</table>
+    <br>
+    <h3>Requerimiento 2. Documentacion ENDPOINT ACTUALIZAR INVERSIONES</h3>
+    <table>
+        <tr><td>Número</td> <td>2</td></tr>
+        <tr><td>Nombre del Servicio</td>  <td>Actualizar inversiones</td></tr>
+        <tr><td>URL</td>  <td>/ActualizarInversiones/:id_Inversiones</td></tr>
+        <tr><td>Descripción</td>  <td>Permite actualizar una inversion existente en la base de datos</td></tr>
+        <tr><td>Metodo HTTP</td>  <td>PUT</td></tr>
+        <tr><td>Usuarios</td><td>Administrador</td></tr>
+        <tr><td>Header</td>  <td>token:token</td></tr>
+        <tr><td>Request json</td>  <td>{
+            "fk_id_costos":1,
+            "egresos":8000,
+            "fk_id_programacion":3
+        }
+    </td></tr>
+        <tr><td>Respuesta json</td>  <td>   
+        Correcto: 
+        Status: 200
+        json:
+        {
+            "status": 200,
+            "message": "Ha sido actualizado",
+        }
+    <br>
+    Incorrecto:
+    
+    Status: 400
+    body:{
+        "status": 400,
+        "message" : "No se encontraron resultados para la actualización."
+    }
+    <br>
+    Error: 
+    
+    Status: 500 
+    json: {
+        "status": 500,
+        "message" : "Error interno del servidor"
+    }
+    </td></tr>
+    <tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+    </table>
+    
+    <h3>Requerimiento 4. Documentacion ENDPOINT BUSCAR UN INVERSIONES</h3>
+    <table>
+        <tr><td>Número</td> <td>4</td></tr>
+        <tr><td>Nombre del Servicio</td>  <td>Buscar un inversiones</td></tr>
+        <tr><td>URL</td>  <td>BuscarInversion/:id_Inversiones</td></tr>
+        <tr><td>Descripción</td>  <td>Permite buscar una inversion por su id en la base de datos</td></tr>
+        <tr><td>Metodo HTTP</td>  <td>GET</td></tr>
+        <tr><td>Usuarios</td><td>Administrador</td></tr>
+        <tr><td>Header</td>  <td>token:token</td></tr>
+        <tr><td>Request json</td>  <td>Null></td></tr>
+        <tr><td>Respuesta json</td>Null<td>   
+        Correcto: 
+        Status: 200
+        json:
+        {
+            "id_inversiones": 4,
+            "id_programacion": 3,
+            "fecha_inicio": "2024-03-29T05:00:00.000Z",
+            "fecha_fin": "2024-03-30T05:00:00.000Z",
+            "id_costos": 2,
+            "precio": 300
+        }      
+    <br>
+    Incorrecto:
+    
+    Status: 404
+    body:{
+        "status": 404,
+        "message" : "No se encontraron resultados"
+    }
+    <br>
+    Error: 
+    
+    Status: 500 
+    json: {
+        "status": 500,
+        "message" : Error
+    }
+    </td></tr>
+    <tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+    </table>
+    <h3>Requerimiento 5. Documentacion ENDPOINT LISTAR INVERSIONES</h3>
+    <table>
+        <tr><td>Número</td> <td>5</td></tr>
+        <tr><td>Nombre del Servicio</td>  <td>Listar inversiones</td></tr>
+        <tr><td>URL</td>  <td>/inversiones</td></tr>
+        <tr><td>Descripción</td>  <td>Permite obtener una lista de todas las inversiones registradas en la base de datos</td></tr>
+        <tr><td>Metodo HTTP</td>  <td>GET</td></tr>
+        <tr><td>Usuarios</td><td>Administrador</td></tr>
+        <tr><td>Header</td>  <td>token:token</td></tr>
+        <tr><td>Request json</td>  <td>Null</td></tr>
+        <tr><td>Respuesta json</td>  <td>   
+        Correcto: 
+        Status: 200
+        json:
+        {
+            "id_inversiones": 1,
+            "id_programacion": 3,
+            "fecha_inicio": "2024-03-29T05:00:00.000Z",
+            "fecha_fin": "2024-03-30T05:00:00.000Z",
+            "id_costos": 1,
+            "precio": 201
+        },
+        {
+            "id_inversiones": 2,
+            "id_programacion": 3,
+            "fecha_inicio": "2024-03-29T05:00:00.000Z",
+            "fecha_fin": "2024-03-30T05:00:00.000Z",
+            "id_costos": 2,
+            "precio": 300
+        }
+        ]
+    <br>
+    Incorrecto:
+    
+    Status: 404
+    body:{
+        "status": 404,
+        "message" : "no hay ninguna inversion"
+    }
+    <br>
+    Error: 
+    
+    Status: 500 
+    json: {
+        "status": 500,
+        "message" : Error
+    }
+    </td></tr>
+    <tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+    </table>
+    <br>
+</body>
+</html>

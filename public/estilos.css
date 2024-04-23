@@ -1,0 +1,46 @@
+/* Estilos para el cuerpo de la página */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+
+  padding: 20px;
+}
+
+/* Estilos para los títulos */
+h1 {
+  color: #333;
+}
+
+h3 {
+  color: #666;
+}
+
+/* Estilos para las tablas */
+table {
+  width: 60%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  
+}
+
+table, th, td {
+  border: 1px solid #ddd;
+}
+
+th, td {
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+/* Estilos para el hr */
+hr {
+  border: 0;
+  height: 1px;
+  background-color: #ccc;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}

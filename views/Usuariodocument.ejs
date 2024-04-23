@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentacion API</title>
+<body>
+  <hr>
+  <h1>USUARIO</h1>
+<table>
+  <tr><td>Número</td> <td>1</td></tr>
+  <tr><td>Nombre del Servicio</td>  <td>Listar Usuarios</td></tr>
+  <tr><td>URI</td>  <td>http://localhost:3000/listarUsuario</td></tr>
+  <tr><td>Descripcion</td>  <td>Permite listar los usuarios registrados en la base de datos</td></tr>
+  <tr><td>Verbo HTTP</td>  <td>Verbo Get</td></tr>
+  <tr><td>Header</td>  <td>token:token</td></tr>
+  <tr><td>Request json</td>  <td></td></tr>
+  <tr><td>Respuesta json</td>  <td>
+    Correcto:
+    status: 200 OK
+    {
+        "nombres": "lucia ",
+        "apellido":"diaz ",
+        "correo":"lucia@soy.com",
+        "password":"holi",
+        "rol":"empleado",
+        "estado":"activo"
+      }
+  <br>
+    Incorrecto:
+
+    404 Not Found
+    {
+      "status": 404,
+      "message": "El usuario no esta registrado"
+    }
+    <br>
+    Error:
+    status: 500 Internal Server Error
+    {
+        "status":  500,
+        "message": "Error en el sistema"
+    }
+  </td></tr>
+  <tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+</table>
+  <hr> <br>
+  <table>
+  <tr><td>Número</td> <td>2</td></tr>
+  <tr><td>Nombre del Servicio</td>  <td>Registrar Usuarios</td></tr>
+  <tr><td>URI</td>  <td>http://localhost:3000/registrarusuario</td></tr>
+  <tr><td>Descripcion</td>  <td>Permite Registrar los usuarios registrados en la base de datos</td></tr>
+  <tr><td>Verbo HTTP</td>  <td>Verbo POST</td></tr>
+  <tr><td>Header</td>  <td>token:token</td></tr>
+  <tr><td>Request json</td> <td>{
+    "nombre": "",
+    "apellido": ,
+    "correo": "",
+    "password": ,
+    "rol": "",
+    "estado": ""            
+    } </td></tr>
+  <tr><td>Respuesta json</td>  <td>
+    Correcto:
+    Status: 200 OK
+    {
+      "status": 200,
+      "message": "Se registró con exito el usuario nombre del usuario"
+    }
+  <br>
+  Incorrecto:
+
+  Status: 404 Not Found
+    {
+    "status": 404,
+    "mensaje": "No se registró el usuario"
+    }
+  <br>
+  Error:
+  status: 500 Internal Server Error
+  {
+    "status":  500,
+    "message": "Error en el sistema"
+  }
+</td></tr>
+<tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+</table>
+<hr><br>
+<table>
+  <tr><td>Número</td> <td>3</td></tr>
+  <tr><td>Nombre del Servicio</td>  <td>Desactivar Usuarios</td></tr>
+  <tr><td>URI</td>  <td>http://localhost:3000/dasactivarUsuario/id_usuario</td></tr>
+  <tr><td>Descripcion</td>  <td>Permite desactivar usuarios en la base de datos</td></tr>
+  <tr><td>Verbo HTTP</td>  <td>Verbo POST</td></tr>
+  <tr><td>Header</td>  <td>token:token</td></tr>
+  <tr><td>Request json</td>  <td> </td></tr>
+  <tr><td>Respuesta json</td>  <td>
+    Correcto:
+    Status: 200 OK
+    {
+      "status": 200,
+      "mensaje": "Su Usuario se desactivó con éxito"
+    }
+  <br>
+Incorrecto:
+
+Status: 404  Not Found
+{
+  "status": 404,
+  "mensaje": "El usuario no se pudo desactivar"
+}
+<br>
+Error:
+
+Status: 500 Internal Server Error
+{
+  status: 500,
+  "message" : "Error en el sistema"
+}
+</td></tr>
+<tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+</table>
+<hr> <br>
+
+<table>
+  <tr><td>Número</td> <td>4</td></tr>
+  <tr><td>Nombre del Servicio</td>  <td>Actualizar Usuario</td></tr>
+  <tr><td>URI</td>  <td>http://localhost:3000/actualizarUsuario/id_usuario</td></tr>
+  <tr><td>Descripcion</td>  <td>Permite Actualizar el usuario registrado en la base de datos</td></tr>
+  <tr><td>Verbo HTTP</td>  <td>Verbo PUT</td></tr>
+  <tr><td>Header</td>  <td>token:token</td></tr>
+  <tr><td>Request json</td>  <td>{
+        "nombre": "lucia Martha",
+        "apellido":"diaz guevara",
+        "correo":"lucia@soy.com",
+        "password":"holi",
+        "rol":"empleado",
+        "estado":"activo"
+      }</td></tr>
+  <tr><td>Respuesta json</td>  <td>
+    Correcto:
+    Status: 200 OK
+    {
+      status: 200,
+      "mensaje": "El usuario ha sido actualizado."
+    }
+  <br>
+  Status: 404 Not Found
+  {
+    "status": 404,
+    "mensaje": "No se pudo actualizar el usuario, inténtalo de nuevo."
+  }
+  <br>
+  Error:
+  status: 500 Internal Server Error
+  {
+    "status": 500,
+    "message" : "Error en el sistema"
+  }
+  </td></tr>
+  <tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+</table>
+  <hr> <br>
+  <table>
+  <tr><td>Número</td> <td>5</td></tr>
+  <tr><td>Nombre del Servicio</td>  <td>Buscar Usuario</td></tr>
+  <tr><td>URI</td>  <td>http://localhost:3000/buscarUsuario/id_usuario</td></tr>
+  <tr><td>Descripcion</td>  <td>Permite buscar usuarios registrados en la base de datos</td></tr>
+  <tr><td>Verbo HTTP</td>  <td>Verbo Get</td></tr>
+  <tr><td>Header</td>  <td> token:token</td></tr>
+  <tr><td>Request json</td>  <td></td></tr>
+  <tr><td>Respuesta json</td>  <td>
+    Correcto:
+    Status: 200 OK
+    [
+    {
+        "nombre": "lucia ",
+        "apellido":"diaz ",
+        "correo":"lucia@soy.com",
+        "password":"holi",
+        "rol":"empleado",
+        "estado":"activo"
+      }
+  ]
+  <br>
+Incorrecto:
+
+Status: 404 Internal Server Error
+{
+  "status": 404,
+  "message" : "No se encontraron usuarios con ese ID"
+}
+<br>
+Error:
+
+Status: 500 Internal Server Error
+{
+  status: 500,
+  "message" : "Error en el sistema"
+}
+</td></tr>
+<tr><td>Nombre Desarrollador:</td> <td>Karen viviana Diaz Guevara</td></tr>
+</table>
+</body>
+</html>
