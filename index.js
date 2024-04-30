@@ -38,7 +38,7 @@ servidor.use('/finca',router)
 servidor.use(rutaDeTipoRecurso)
 servidor.use(rutaCostos)
 servidor.use(rutaCultivos)
-servidor.use(rutaProduccion)
+servidor.use('/pro',rutaProduccion)
 servidor.use(rutaDeEmpleado)
 
 

@@ -11,7 +11,7 @@ export const validar = async (req, res) => {
         const [rows] = await pool.query(sql)
         if (rows.length>0) {
             let token=Jwt.sign({rows},process.env.AUT_SECRET,{expiresIn:process.env.AUT_EXPIRE})
-            return res.status(200).json({'correo':rows, 'token':token,message:'token generado con exito'})
+            return res.status(200).json({'user':rows, 'token':token,message:'token generado con exito'})
         }else{
             return res.status(404).json({"message":"Usuario no autorizado"})
         }

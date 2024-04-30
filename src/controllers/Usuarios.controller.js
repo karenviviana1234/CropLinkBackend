@@ -1,6 +1,6 @@
 import {pool} from '../database/conexion.js'
 import { validationResult } from "express-validator"
-import bcrypt from 'bcrypt';
+// import bcrypt from 'bcrypt';
 
 export const registrarUsuarios = async (req, res) => {
     try {
@@ -12,14 +12,14 @@ export const registrarUsuarios = async (req, res) => {
       const { identificacion, nombre, apellido, correo, password, rol } = req.body;
   
       // Encriptar la contraseña
-      const bcryptPassword = bcrypt.hashSync(password, 12);
+    //   const bcryptPassword = bcrypt.hashSync(password, 12);
   
       // Asignar el valor "activo" directamente al campo estado
       const estado = 'activo';
   
       const [rows] = await pool.query(
         `INSERT INTO usuarios (identificacion, nombre, apellido, correo, password, rol, estado) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [identificacion, nombre, apellido, correo, bcryptPassword, rol, estado]
+        [identificacion, nombre, apellido, correo, password, rol, estado]
       );
   
       if (rows.affectedRows > 0) {
@@ -39,24 +39,26 @@ export const registrarUsuarios = async (req, res) => {
       });
     }
   };
-export const listarUsuarios = async (req, res) => {
+  export const listarUsuarios = async (req, res) => {
     try {
-    const [ result ] = await pool.query('SELECT * FROM usuarios');
-        if (result.length >  0) {
-            res.status(200).json(result)
+        const [result] = await pool.query('SELECT * FROM usuarios');
+        if (result.length > 0) {
+            res.status(200).json(result);
         } else {
             res.status(404).json({
                 status: 404,
-                "message": 'El usuario no esta registrados'
+                message: 'No se encontraron usuarios registrados'
             });
         }
     } catch (error) {
         res.status(500).json({
-            status:  500,
-            message: 'Error en el sistema'+error
-        })
+            status: 500,
+            message: 'Error en el sistema',
+            error: error.message // Se agrega el mensaje de error separado
+        });
     }
-}
+};
+
 
 export const buscarUsuario = async (req, res) => {
     try {
