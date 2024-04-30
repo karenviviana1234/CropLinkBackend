@@ -128,46 +128,60 @@ export const eliminarlote = async (req, res) => {
     }
 }
 
+
 export const desactivarlote = async (req, res) => {
-    try {
+  try {
       const { id_lote } = req.params;
-      
+
       // Consultar el estado actual del lote
       const [lote] = await pool.query(
-        "SELECT estado FROM lotes WHERE id_lote = ?",
-        [id_lote]
+          "SELECT estado, fk_id_finca FROM lotes WHERE id_lote = ?",
+          [id_lote]
       );
-  
+
       if (lote.length === 0) {
-        return res.status(404).json({
-          status: 404,
-          message: "El lote con el ID " + id_lote + " no existe.",
-        });
+          return res.status(404).json({
+              status: 404,
+              message: "El lote con el ID " + id_lote + " no existe.",
+          });
       }
-  
+
+      // Consultar el estado de la finca relacionada
+      const [finca] = await pool.query(
+          "SELECT estado FROM finca WHERE id_finca = ?",
+          [lote[0].fk_id_finca]
+      );
+
+      // Verificar si la finca está activa
+      if (finca.length === 0 || finca[0].estado !== 'activo') {
+          return res.status(403).json({
+              status: 403,
+              message: "No se puede cambiar el estado del lote porque la finca correspondiente no está activa.",
+          });
+      }
+
       // Cambiar el estado del lote
       const nuevoEstado = lote[0].estado === 'activo' ? 'inactivo' : 'activo';
       const [result] = await pool.query(
-        "UPDATE lotes SET estado = ? WHERE id_lote = ?",
-        [nuevoEstado, id_lote]
+          "UPDATE lotes SET estado = ? WHERE id_lote = ?",
+          [nuevoEstado, id_lote]
       );
-  
+
       if (result.affectedRows > 0) {
-        res.status(200).json({
-          status: 200,
-          mensaje: "El estado del lote con el ID " + id_lote + " ha sido cambiado a " + nuevoEstado + ".",
-        });
+          res.status(200).json({
+              status: 200,
+              mensaje: "El estado del lote con el ID " + id_lote + " ha sido cambiado a " + nuevoEstado + ".",
+          });
       } else {
-        res.status(500).json({
-          status: 500,
-          message: "No se pudo cambiar el estado del lote",
-        });
+          res.status(500).json({
+              status: 500,
+              message: "No se pudo cambiar el estado del lote",
+          });
       }
-    } catch (error) {
+  } catch (error) {
       res.status(500).json({
-        status: 500,
-        message: "Error en el sistema: " + error,
+          status: 500,
+          message: "Error en el sistema: " + error,
       });
-    }
-  };
-  
+  }
+};

@@ -5,14 +5,14 @@ import { validationResult } from 'express-validator';
 //crid
 export const listarFinca = async (req, res) => {
     try {
-        
+
         const [result] = await pool.query("SELECT * FROM finca")
 
-        if (result.length > 0 ) {
+        if (result.length > 0) {
             res.status(200).json(result)
         } else {
             res.status(400).json({
-                "Mensaje":"No hay fincas"
+                "Mensaje": "No hay fincas"
             })
         }
     } catch (error) {
@@ -29,12 +29,12 @@ export const RegistroFinca = async (req, res) => {
         if (!errors.isEmpty()) {
             return res.status(400).json(errors);
         }
-           
+
         const { nombre_finca, longitud, latitud } = req.body;
 
         // Modifica la consulta SQL para incluir el valor predeterminado del estado activo
         const [result] = await pool.query("INSERT INTO finca (nombre_finca, longitud, latitud, estado) VALUES (?, ?, ?, 'activo')", [nombre_finca, longitud, latitud]);
-        
+
         if (result.affectedRows > 0) {
             res.status(200).json({
                 status: 200,
@@ -93,7 +93,7 @@ export const ActualizarFinca = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error("Error en la función Actualizar:", error);  
+        console.error("Error en la función Actualizar:", error);
         return res.status(500).json({
             status: 500,
             message: error.message || "error en el sistema"
@@ -106,7 +106,7 @@ export const BuscarFinca = async (req, res) => {
     try {
         const { id } = req.params;
         const [result] = await pool.query("SELECT * FROM finca WHERE id_finca =?", [id]);
-                    
+
         if (result.length > 0) {
             res.status(200).json(result);
         } else {
@@ -127,32 +127,52 @@ export const desactivarF = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Consulta la finca por su ID
-        const [finca] = await pool.query("SELECT * FROM finca WHERE id_finca = ?", [id]);
+        // Inicia una transacción
+        await pool.query("START TRANSACTION");
+
+        // Consulta la finca por su ID y bloquea la fila para evitar lecturas simultáneas
+        const [finca] = await pool.query("SELECT * FROM finca WHERE id_finca = ? FOR UPDATE", [id]);
 
         // Verifica si se encontró la finca
         if (finca.length === 0) {
+            await pool.query("ROLLBACK"); // Si no se encontró, deshace la transacción
             return res.status(404).json({
                 status: 404,
                 message: 'Finca no encontrada',
             });
         }
 
-        // Invierte el estado de la finca
-        const nuevoEstado = finca[0].estado === 'activo' ? 'inactivo' : 'activo';
+        // Determina el nuevo estado
+        let nuevoEstado;
+        if (finca[0].estado === 'activo') {
+            nuevoEstado = 'inactivo'; // Si estaba activo, se desactiva
+        } else {
+            nuevoEstado = 'activo'; // Si estaba inactivo, se activa
+        }
 
         // Actualiza el estado de la finca
         await pool.query("UPDATE finca SET estado = ? WHERE id_finca = ?", [nuevoEstado, id]);
 
+        // Actualiza el estado de los lotes relacionados
+        await pool.query("UPDATE lotes SET estado = ? WHERE fk_id_finca = ?", [nuevoEstado, id]);
+
+          // Actualiza el estado de los lotes relacionados
+          await pool.query("UPDATE cultivo SET estado = ? WHERE fk_id_lote = ?", [nuevoEstado, id]);
+
+
+        // Confirma la transacción
+        await pool.query("COMMIT");
+
         res.status(200).json({
             status: 200,
-            message: `Estado de la finca actualizado a ${nuevoEstado}`,
+            message: `Estado de la finca y lotes actualizados a ${nuevoEstado}`,
         });
     } catch (error) {
+        // Si ocurre un error, deshace la transacción
+        await pool.query("ROLLBACK");
         res.status(500).json({
             status: 500,
             message: error.message || 'Error en el sistema',
         });
     }
 }
-

@@ -9,7 +9,7 @@ const rutaDeActividad = Router()
 
 //localhost:4000/VariedadCultivo
 rutaDeActividad.get("/listara",validarToken, listarA);
-rutaDeActividad.post("/Registrara",validarToken, validarRR, RegistrarA);
+rutaDeActividad.post("/Registrara",validarToken,  validarRR,  RegistrarA);
 rutaDeActividad.put("/Actualizara/actividad/:id",validarToken, validarRA, ActualizarA);
 rutaDeActividad.put("/Desactivara/actividad/:id", validarToken , DesactivarA);
 rutaDeActividad.get("/Buscar/actividad/:id",validarToken, BuscarA);
