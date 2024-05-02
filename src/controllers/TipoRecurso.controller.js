@@ -31,7 +31,7 @@ export const RegistroTipoRecurso = async (req, res) => {
         const { nombre_recursos, cantidad_medida, unidades_medida, extras } = req.body;
 
         // Asigna el estado predeterminado como "activo"
-        const estado = 'activo';
+        const estado = 'existente';
 
         const [result] = await pool.query("INSERT INTO tipo_recursos (nombre_recursos, cantidad_medida, unidades_medida, estado, extras) VALUES (?, ?, ?, ?, ?)", [nombre_recursos, cantidad_medida, unidades_medida, estado, extras]);
         
@@ -107,7 +107,7 @@ export const DesactivarR = async (req, res) => {
         const [oldRecurso] = await pool.query("SELECT * FROM tipo_recursos WHERE id_tipo_recursos = ?", [id]); 
         
         // Verifica si el estado actual es "activo" para cambiarlo a "gastado/a" y viceversa
-        const newEstado = oldRecurso[0].estado === 'activo' ? 'gastada_o' : 'activo';
+        const newEstado = oldRecurso[0].estado === 'existente' ? 'gastada_o' : 'existente';
 
         const [result] = await pool.query(
             `UPDATE tipo_recursos SET estado = ? WHERE id_tipo_recursos = ?`,[newEstado, id]

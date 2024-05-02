@@ -1,7 +1,7 @@
 import { pool } from "../database/conexion.js";
 import { validationResult } from "express-validator";
 
-//listar
+//listar raa
 export const listarA = async (req, res) => {
   try {
     let sql = `SELECT ac.id_actividad, 
