@@ -23,7 +23,7 @@ servidor.use(cors())
 servidor.use(body_parser.json())
 servidor.use(body_parser.urlencoded({extended: false}))
 servidor.listen(3000, () =>{
-    console.log("esta funcionando")
+    console.log("esta funcionando en el puerto 3000")
 })
 
 //rutas
