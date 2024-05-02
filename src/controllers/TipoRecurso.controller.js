@@ -21,18 +21,19 @@ export const listarTipoRecurso = async (req, res) => {
     }
 }
 //crud Registrar
-//crud
 export const RegistroTipoRecurso = async (req, res) => {
     try {
-            const errors= validationResult(req);
-            if(!errors.isEmpty()){
-                return res.status(400).json(errors);
-            }
-           
-        const { nombre_recursos, cantidad_medida, unidades_medida,extras } = req.body;
+        const errors= validationResult(req);
+        if(!errors.isEmpty()){
+            return res.status(400).json(errors);
+        }
+        
+        const { nombre_recursos, cantidad_medida, unidades_medida, extras } = req.body;
 
+        // Asigna el estado predeterminado como "activo"
+        const estado = 'existente';
 
-        const [result] = await pool.query("INSERT INTO tipo_recursos (nombre_recursos, cantidad_medida, unidades_medida,extras) VALUES (?, ?, ?, ?)", [nombre_recursos, cantidad_medida, unidades_medida,extras]);
+        const [result] = await pool.query("INSERT INTO tipo_recursos (nombre_recursos, cantidad_medida, unidades_medida, estado, extras) VALUES (?, ?, ?, ?, ?)", [nombre_recursos, cantidad_medida, unidades_medida, estado, extras]);
         
         if (result.affectedRows > 0) {
             res.status(200).json({
@@ -99,36 +100,40 @@ export const ActualizarTipoRecurso = async (req, res) => {
     }
 };
 //CRUD - Desactivar
-export const DesactivarTipoRecurso = async (req, res) => {
+export const DesactivarR = async (req, res) => {
     try {
         const { id } = req.params;
-        const { estado } = req.body;
 
         const [oldRecurso] = await pool.query("SELECT * FROM tipo_recursos WHERE id_tipo_recursos = ?", [id]); 
         
+        // Verifica si el estado actual es "activo" para cambiarlo a "gastado/a" y viceversa
+        const newEstado = oldRecurso[0].estado === 'existente' ? 'gastada_o' : 'existente';
+
         const [result] = await pool.query(
-            `UPDATE tipo_recursos SET estado = ${estado ? `'${estado}'` : `'${oldRecurso[0].estado}'`} WHERE id_tipo_recursos = ?`,[id]
+            `UPDATE tipo_recursos SET estado = ? WHERE id_tipo_recursos = ?`,[newEstado, id]
         );
 
         if (result.affectedRows > 0) {
             res.status(200).json({
                 status: 200,
-                message: 'Se desactivo con éxito',
-                result: result
+                message: `Se cambió el estado del recurso a '${newEstado}' con éxito`,
+                
             });
         } else {
             res.status(404).json({
                 status: 404,
-                message: 'No se encontró el registro para desactivar'
+                message: 'No se encontró el registro para cambiar el estado'
             });
         }
     } catch (error) {
         res.status(500).json({
             status: 500,
-            message: error
+            message: error.message || 'Error en el servidor'
         });
     }
 }
+
+    
 
 // CRUD - Buscar
 export const BuscarTipoRecurso = async (req, res) => {

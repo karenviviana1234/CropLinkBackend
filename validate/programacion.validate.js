@@ -6,8 +6,10 @@ export const programacionC = [
     check('fecha_fin', 'La fecha de la programacion debe ser YYYY-MM-DD').notEmpty().matches(/^\d{4}-\d{2}-\d{2}$/),
     check('fk_identificacion', 'El campo de clave foránea debe contener solo números naturales').notEmpty().isInt(),
     check('fk_id_cultivo', 'El campo de clave foránea debe contener solo números naturales o el fk_id_cultivo no existe').notEmpty().isNumeric(),
-    check('fk_id_actividad', 'El campo de clave foránea debe contener solo números naturales o el fk_id_actividad no existe').notEmpty().isInt()
- ];
+    check('fk_id_actividad', 'El campo de clave foránea debe contener solo números naturales o el fk_id_actividad no existe').notEmpty().isInt(),
+    check('estado', 'El campo de estado debe ser "activo", "proceso", "terminado" o "inactivo"').isIn(['activo', 'proceso', 'terminado', 'inactivo']),
+
+];
 
 
 // Actualizar Asignación

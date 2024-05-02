@@ -156,9 +156,65 @@ export const buscar = async (req, res) => {
     } catch (error) {
         res.status(500).json({ status: 500, message: 'Error en el sistema: ' + error });
     }
+};export const desactivar = async (req, res) => {
+    try {
+        const { id_cultivo } = req.params;
+
+        // Consultar el estado actual del cultivo, el ID del lote asociado y el ID de la variedad asociada
+        const [cultivo] = await pool.query("SELECT estado, fk_id_lote, fk_id_variedad FROM cultivo WHERE id_cultivo = ?", [id_cultivo]);
+
+        if (cultivo.length > 0) {
+            const estadoActual = cultivo[0].estado;
+            const fk_id_lote = cultivo[0].fk_id_lote;
+            const fk_id_variedad = cultivo[0].fk_id_variedad;
+
+            // Consultar el estado actual del lote asociado
+            const [lote] = await pool.query("SELECT estado FROM lotes WHERE id_lote = ?", [fk_id_lote]);
+
+            // Consultar el estado actual de la variedad asociada
+            const [variedad] = await pool.query("SELECT estado FROM variedad WHERE id_variedad = ?", [fk_id_variedad]);
+
+            // Verificar si el estado del lote o de la variedad están inactivos para no permitir activar el cultivo
+            if ((lote.length > 0 && lote[0].estado === 'inactivo') || (variedad.length > 0 && variedad[0].estado === 'inactivo')) {
+                return res.status(403).json({
+                    status: 403,
+                    message: 'No se puede cambiar el estado del cultivo porque el lote o la variedad asociada está inactiva'
+                });
+            }
+
+            // Determinar el nuevo estado del cultivo
+            const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
+
+            // Actualizar el estado del cultivo en la base de datos
+            const [result] = await pool.query(
+                "UPDATE cultivo SET estado = ? WHERE id_cultivo = ?", [nuevoEstado, id_cultivo]
+            );
+
+            if (result.affectedRows > 0) {
+                res.status(200).json({
+                    status: 200,
+                    message: `Se cambió el estado del cultivo a ${nuevoEstado} con éxito`
+                });
+            } else {
+                res.status(404).json({
+                    status: 404,
+                    message: 'No se encontró el cultivo para desactivar'
+                });
+            }
+        } else {
+            res.status(404).json({
+                status: 404,
+                message: 'No se encontró el cultivo'
+            });
+        }
+    } catch (error) {
+        res.status(500).json({ status: 500, message: 'Error en el sistema: ' + error });
+    }
 };
 
 
+
+/* 
 export const desactivar = async (req, res) => {
     try {
         const { id_cultivo } = req.params;
@@ -202,3 +258,4 @@ export const desactivar = async (req, res) => {
         res.status(500).json({ status: 500, message: 'Error en el sistema: ' + error });
     }
 }
+ */

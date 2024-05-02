@@ -1,7 +1,7 @@
 import { pool } from "../database/conexion.js";
 import { validationResult } from "express-validator";
 
-//listar
+//listar raa
 export const listarA = async (req, res) => {
   try {
     let sql = `SELECT ac.id_actividad, 
@@ -31,7 +31,6 @@ export const listarA = async (req, res) => {
     });
   }
 };
-
 export const RegistrarA = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -45,10 +44,16 @@ export const RegistrarA = async (req, res) => {
       observaciones,
       fk_id_variedad,
       valor_actividad,
+      estado // Agregar estado al destructuring
     } = req.body;
 
-    // Asignar el valor "activo" directamente al campo estado
-    const estado = "activo";
+    // Verificar si el campo estado está presente en el cuerpo de la solicitud
+    if (!estado) {
+      return res.status(400).json({
+        status: 400,
+        message: "El campo 'estado' es obligatorio"
+      });
+    }
 
     const [variedadExist] = await pool.query(
       "SELECT * FROM variedad WHERE id_variedad = ?",
@@ -191,7 +196,10 @@ WHERE id_actividad = ${id}`
   }
 };
 
-// crud desactivar
+
+
+// crud desactivar/* 
+
 export const DesactivarA = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -249,7 +257,8 @@ export const DesactivarA = async (req, res) => {
       message: "Error en el sistema: " + error.message,
     });
   }
-};
+}; 
+ 
 
 // CRUD - Buscar
 export const BuscarA = async (req, res) => {

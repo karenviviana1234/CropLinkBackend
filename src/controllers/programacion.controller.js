@@ -10,11 +10,16 @@ export const registrarProgramacion = async (req, res) => {
     }
 
     const {
-      fecha_inicio,fecha_fin,fk_identificacion,fk_id_actividad,fk_id_cultivo} = req.body;
+      fecha_inicio,fecha_fin,fk_identificacion,fk_id_actividad,fk_id_cultivo,estado} = req.body;
 
-    // Asignar el valor "activo" directamente al campo estado
-    const estado = 'activo';
-
+   
+         // Verificar si el campo estado está presente en el cuerpo de la solicitud
+    if (!estado) {
+      return res.status(400).json({
+        status: 400,
+        message: "El campo 'estado' es obligatorio"
+      });
+    }
     // Verificar si el usuario existe
     const [usuarioExist] = await pool.query("SELECT * FROM usuarios WHERE identificacion = ?",[fk_identificacion]);
     if (usuarioExist.length === 0) {
@@ -51,7 +56,7 @@ export const registrarProgramacion = async (req, res) => {
     // Insertar la programación
     const [result] = await pool.query(
       "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo) VALUES (?,?,?,?,?,?)",
-      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo ]
+      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo,estado ]
     );
 
     if (result.affectedRows > 0) {
@@ -211,40 +216,41 @@ export const actualizarProgramacion = async (req, res) => {
 
 
 // CRUD - Estado
-export const estadoProgramacion = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { estado } = req.body;
-    const [oldTipoRecurso] = await pool.query(
-      "SELECT * FROM programacion WHERE id_programacion=?",
-      [id]
-    );
 
-    const nuevoEstado = estado || (oldTipoRecurso[0].estado === 'activo' ? 'inactivo' : 'activo');
+  export const estadoProgramacion = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { estado } = req.body;
+      const [oldTipoRecurso] = await pool.query(
+        "SELECT * FROM programacion WHERE id_programacion=?",
+        [id]
+      );
 
-    const [result] = await pool.query(
-      `UPDATE programacion SET estado = ? WHERE id_programacion=?`,
-      [nuevoEstado, id]
-    );
-    
-    if (result.affectedRows > 0) {
-      res.status(200).json({
-        status: 200,
-        message: `El estado se realizó correctamente y ahora es ${nuevoEstado}`,
-      });
-    } else {
-      res.status(404).json({
-        status: 404,
-        message: "El estado no se realizó correctamente",
+      const nuevoEstado = estado || (oldTipoRecurso[0].estado === 'activo' ? 'inactivo' : 'activo');
+
+      const [result] = await pool.query(
+        `UPDATE programacion SET estado = ? WHERE id_programacion=?`,
+        [nuevoEstado, id]
+      );
+      
+      if (result.affectedRows > 0) {
+        res.status(200).json({
+          status: 200,
+          message: `El estado se realizó correctamente y ahora es ${nuevoEstado}`,
+        });
+      } else {
+        res.status(404).json({
+          status: 404,
+          message: "El estado no se realizó correctamente",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: 500,
+        message: error.message || "Error interno del servidor",
       });
     }
-  } catch (error) {
-    res.status(500).json({
-      status: 500,
-      message: error.message || "Error interno del servidor",
-    });
-  }
-};
+  };
 
 
 // CRUD -buscar

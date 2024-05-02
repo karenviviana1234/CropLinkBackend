@@ -9,6 +9,8 @@ export const validarRR = [
     check('valor_actividad', 'El campo de valor de actividad debe ser un número').isInt().isNumeric(),
    /*  check('observacion', 'El campo de observacion no puede tener más de 40 palabras').optional().matches(/^(\b\w+\b[\s\r\n]*){0,40}$/),
      */
+   check('estado', 'El campo de estado debe ser "activo","proceso","terminado","inactivo"').isIn(['activo','proceso', 'terminado','inactivo'])
+
 ];
 
 // ACTUALIZAR

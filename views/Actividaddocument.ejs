@@ -234,44 +234,4 @@
     </td></tr>
     <tr><td>Programador</td> <td>Daniel F Gonzalez - devdfg</td></tr>
     </table>
-    <h3>Requerimiento 1. Documentacion ENDPOINT ACTUALIZAR ESTADO ACTIVIDAD</h3>
-    <table>
-        <tr><td>Número</td> <td>5</td></tr>
-        <tr><td>Nombre del Servicio</td>  <td>Actualizar Actividad</td></tr>
-        <tr><td>URL</td>  <td>/EmpleadoMood/actividad/:id</td></tr>
-        <tr><td>Descripción</td>  <td>Permite actualizar el estado de las actividades registradas en la base de datos</td></tr>
-        <tr><td>Metodo HTTP</td>  <td>GET</td></tr>
-        <tr><td>Header</td>  <td>Token:token</td></tr>
-        <tr><td>Usuarios</td> <td>Empleado</td></tr>
-        <tr><td>Request json</td>  <td>Null</td></tr>
-        <tr><td>Respuesta json</td>  <td>   
-        Correcto: 
-        Status: 200
-        json:
-        [
-        {   
-            "message": "Estado de la actividad y de la programación actualizados con éxito",
-            "nuevoEstado": "terminado"
-        }
-        ]
-    <br>
-    Incorrecto:
-    
-    Status: 404
-    body:{
-        "status": 404,
-        "message" : "el estado ya esta terminado"
-    }
-    <br>
-    Error: 
-    
-    Status: 500 
-    json: {
-        "status": 500,
-        "message" : "Error en el sistema"
-    }
-    </td></tr>
-    <tr><td>Programador</td> <td>Daniel F Gonzalez - devdfg</td></tr>
-    </table>
-    </body>
-    </body>
+   
