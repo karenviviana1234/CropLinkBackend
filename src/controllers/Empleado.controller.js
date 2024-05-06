@@ -2,6 +2,51 @@ import { pool } from "../database/conexion.js";
 import { validationResult } from 'express-validator';
 
 
+
+export const listarEmpleado = async (req, res) => {
+    try {
+        const { identificacion } = req.params;
+    
+        const [result] = await pool.query(`
+            SELECT  
+                p.id_programacion,
+                u.nombre,
+                u.identificacion,
+                p.fecha_inicio,
+                p.fecha_fin,
+                v.nombre_variedad,
+                t.nombre_actividad,
+                t.tiempo,
+                t.observaciones
+            FROM 
+                programacion p
+            INNER JOIN 
+                cultivo c ON p.fk_id_cultivo = c.id_cultivo
+            INNER JOIN 
+                variedad v ON c.fk_id_variedad = v.id_variedad
+            INNER JOIN 
+                actividad t ON p.fk_id_actividad = t.id_actividad
+            INNER JOIN 
+                usuarios u ON p.fk_identificacion = u.identificacion
+            WHERE 
+                u.identificacion = ?;
+        `, [identificacion]);
+    
+        if (result.length > 0) {
+            res.status(200).json(result);
+        } else {
+            res.status(404).json({
+                status: 404,
+                message: "No se encontró ningún empleado con esa identificación",
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            message: error.message || "Error interno del servidor",
+        });
+    }
+};
+  
 /* // Controlador para mostrar actividades asignadas a un empleado
 export const listarE = async (req, res) => {
     try {

@@ -39,6 +39,8 @@ export const registrarUsuarios = async (req, res) => {
       });
     }
   };
+
+  
   export const listarUsuarios = async (req, res) => {
     try {
         const [result] = await pool.query('SELECT * FROM usuarios');
@@ -54,7 +56,7 @@ export const registrarUsuarios = async (req, res) => {
         res.status(500).json({
             status: 500,
             message: 'Error en el sistema',
-            error: error.message // Se agrega el mensaje de error separado
+            error: error.message 
         });
     }
 };
@@ -78,9 +80,11 @@ export const buscarUsuario = async (req, res) => {
         res.status(500).json({ 
             status: 500, 
             message: 'Error en el sistema: ' + error 
-        });
+        });   
     }
 };
+
+
 export const actualizarUsuario = async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -141,7 +145,6 @@ export const desactivarUsuario = async (req, res) => {
     try {
         const { identificacion } = req.params;
 
-        // Obtener el estado actual del usuario
         const [currentUser] = await pool.query("SELECT estado FROM usuarios WHERE identificacion=?", [identificacion]);
         if (currentUser.length === 0) {
             return res.status(404).json({
@@ -153,14 +156,12 @@ export const desactivarUsuario = async (req, res) => {
         const estadoActual = currentUser[0].estado;
         let nuevoEstado = '';
 
-        // Determinar el nuevo estado
         if (estadoActual === 'activo') {
             nuevoEstado = 'inactivo';
         } else {
             nuevoEstado = 'activo';
         }
 
-        // Actualizar el estado del usuario en la base de datos
         const [result] = await pool.query("UPDATE usuarios SET estado=? WHERE identificacion=?", [nuevoEstado, identificacion]);
 
         if (result.affectedRows > 0) {
