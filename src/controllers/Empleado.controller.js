@@ -1,15 +1,14 @@
 import { pool } from "../database/conexion.js";
 import { validationResult } from 'express-validator';
 
-
-
 export const listarEmpleado = async (req, res) => {
     try {
-        const { identificacion } = req.params;
-    
+        // Obtener la identificación del usuario autenticado
+        const identificacion = req.usuario;
+
+        // Obtener todas las asignaciones relacionadas con el empleado
         const [result] = await pool.query(`
             SELECT  
-                p.id_programacion,
                 u.nombre,
                 u.identificacion,
                 p.fecha_inicio,
@@ -37,7 +36,7 @@ export const listarEmpleado = async (req, res) => {
         } else {
             res.status(404).json({
                 status: 404,
-                message: "No se encontró ningún empleado con esa identificación",
+                message: "No se encontró ninguna asignación para este empleado",
             });
         }
     } catch (error) {
@@ -46,6 +45,8 @@ export const listarEmpleado = async (req, res) => {
         });
     }
 };
+
+
   
 /* // Controlador para mostrar actividades asignadas a un empleado
 export const listarE = async (req, res) => {
@@ -75,6 +76,8 @@ export const listarE = async (req, res) => {
     }
 };
  */
+// este sirve, solo que lo comente por si las moscas
+
 export const RegistrarE = async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -117,9 +120,8 @@ export const RegistrarE = async (req, res) => {
         });
     }
 };
-
-
-
+ 
+//
 
 //para cambiar los estados y este va para los botones
 export const Empleado = async (req, res) => {
