@@ -3,27 +3,38 @@ import { validationResult } from "express-validator";
 
 export const listarProduccion = async (req, res) => {
     try {
-        let sql = `SELECT produ.id_producccion,produ.cantidad_produccion, 
-        produ.fk_id_programacion  AS id_programacion,  
-        pro.fecha_inicio, 
-        pro.fecha_fin
-FROM produccion AS produ
-JOIN programacion AS pro ON produ.fk_id_programacion  = pro.id_programacion`;
+        // Obtener el admin_id del usuario autenticado
+        const adminId = req.usuario;
 
-        const [listar] = await pool.query(sql);
+        let sql = `
+            SELECT 
+                produ.id_producccion,
+                produ.cantidad_produccion, 
+                produ.fk_id_programacion AS id_programacion,  
+                pro.fecha_inicio, 
+                pro.fecha_fin
+            FROM 
+                produccion AS produ
+            JOIN 
+                programacion AS pro ON produ.fk_id_programacion = pro.id_programacion
+            WHERE
+                pro.admin_id = ?;
+        `;
+
+        const [listar] = await pool.query(sql, [adminId]);
 
         if (listar.length > 0) {
             res.status(200).json(listar);
         } else {
             res.status(400).json({
                 status: 400,
-                message: 'no hay ningun produccion'
+                message: 'No hay ninguna producción asociada al administrador actual'
             });
         }
     } catch (error) {
         res.status(500).json({
             status: 500,
-            message: 'error en el servidor',
+            message: 'Error en el servidor',
         });
         console.log(error);
     }
@@ -31,22 +42,26 @@ JOIN programacion AS pro ON produ.fk_id_programacion  = pro.id_programacion`;
 
 export const registrarProduccion = async (req, res) => {
     try {
-        const error = validationResult(req);
+        const errors = validationResult(req);
 
-        if (!error.isEmpty()) {
+        if (!errors.isEmpty()) {
             return res.status(400).json({
-                errors: error.array()
+                errors: errors.array()
             });
         }
 
         const { cantidad_produccion, precio, fk_id_programacion } = req.body;
 
-        const [variedadExiste] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ?', [fk_id_programacion]);
+        // Obtener el admin_id del usuario autenticado
+        const adminId = req.usuario;
 
-        if (variedadExiste.length === 0) {
+        // Verificar si la programación existe y pertenece al administrador actual
+        const [programacionExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ? AND admin_id = ?', [fk_id_programacion, adminId]);
+
+        if (programacionExist.length === 0) {
             return res.status(404).json({
                 status: 404,
-                message: 'Este ID no existe. Por favor, registre la programacion primero.'
+                message: 'Esta programación no existe o no está autorizada para este administrador. Registre primero la programación.'
             });
         }
 
@@ -56,8 +71,8 @@ export const registrarProduccion = async (req, res) => {
             });
         }
 
-        const [Registrar] = await pool.query('INSERT INTO produccion (cantidad_produccion, precio, fk_id_programacion) VALUES (?, ?, ?)',
-            [cantidad_produccion, precio, fk_id_programacion]);
+        const [Registrar] = await pool.query('INSERT INTO produccion (cantidad_produccion, precio, fk_id_programacion,admin_id) VALUES (?, ?, ?, ?)',
+            [cantidad_produccion, precio, fk_id_programacion, admin_id]);
 
         if (Registrar.affectedRows > 0) {
             res.status(200).json({
@@ -78,6 +93,7 @@ export const registrarProduccion = async (req, res) => {
         console.log(error);
     }
 };
+
 
 export const BuscarProduccion = async (req, res) => {
     try {
@@ -118,46 +134,29 @@ export const actualizarProduccion = async (req, res) => {
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { id_producccion  } = req.params;
+        const { id_producccion } = req.params;
         const { cantidad_produccion, precio, fk_id_programacion } = req.body;
 
-        if (!cantidad_produccion && !precio && !fk_id_programacion ) {
+        if (!cantidad_produccion && !precio && !fk_id_programacion) {
             return res.status(400).json({
-              message:
-                "se requiere uno de los campos para actualizar (cantidad_produccion, precio, fk_id_programacion)",
-            });
-        }
-        const [variedadExiste] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ?', [fk_id_programacion]);
-
-        if (variedadExiste.length === 0) {
-            return res.status(404).json({
-                status: 404,
-                message: 'Este ID no existe. Por favor, registre la variedad primero.'
+                message: "Se requiere al menos uno de los campos para actualizar (cantidad_produccion, precio, fk_id_programacion)",
             });
         }
 
-        // Verificar si la producción a actualizar existe
-        const [produccionExistente] = await pool.query('SELECT * FROM produccion WHERE id_producccion =?', [id_producccion ]);
+        // Obtener el admin_id del usuario autenticado
+        const adminId = req.usuario;
+
+        // Verificar si la producción a actualizar existe y pertenece al administrador actual
+        const [produccionExistente] = await pool.query('SELECT * FROM produccion AS p INNER JOIN programacion AS pro ON p.fk_id_programacion = pro.id_programacion WHERE p.id_producccion = ? AND pro.admin_id = ?', [id_producccion, adminId]);
 
         if (produccionExistente.length === 0) {
             return res.status(404).json({
                 status: 404,
-                message: 'Producción no encontrada. El ID proporcionado no existe.'
+                message: 'La producción no existe o no está autorizada para actualizar por este administrador. Verifique el ID proporcionado.'
             });
         }
 
-        // Verificar si los valores son diferentes para evitar realizar la misma actualización
-        if (
-            produccionExistente[0].cantidad_produccion === cantidad_produccion &&
-            produccionExistente[0].precio === precio &&
-            produccionExistente[0].fk_id_programacion === fk_id_programacion
-        ) {
-            return res.status(404).json({
-                status: 404,
-                message: 'No se ha realizado ningún cambio. Los datos son iguales a los existentes.'
-            });
-        }
-
+        // Construir y ejecutar la consulta de actualización
         const updateValues = {
             cantidad_produccion: cantidad_produccion || produccionExistente[0].cantidad_produccion,
             precio: precio || produccionExistente[0].precio,
@@ -170,18 +169,18 @@ export const actualizarProduccion = async (req, res) => {
             updateValues.cantidad_produccion,
             updateValues.precio,
             updateValues.fk_id_programacion,
-            id_producccion 
+            id_producccion
         ]);
 
         if (updatedProduccion.affectedRows > 0) {
             res.status(200).json({
                 status: 200,
-                message: updatedProduccion.changedRows > 0 ? 'Se actualizó con éxito' : 'Sin cambios realizados',
+                message: updatedProduccion.changedRows > 0 ? 'La producción se actualizó correctamente' : 'No se realizaron cambios',
             });
         } else {
-            res.status(400).json({
-                status: 400,
-                message: 'No se encontraron resultados para la actualización',
+            res.status(404).json({
+                status: 404,
+                message: 'No se encontraron resultados para actualizar',
             });
         }
     } catch (error) {

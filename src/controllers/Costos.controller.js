@@ -1,102 +1,123 @@
 import { pool } from '../database/conexion.js';
 import { validationResult } from 'express-validator';
 
-export const listar = async (req,res) => {
-    try{
-      let sql = `SELECT cos.id_costos, cos.precio, 
-                      tr.nombre_recursos, tr.cantidad_medida,tr.unidades_medida,tr.extras,cos.estado
-               FROM costos AS cos
-               JOIN tipo_recursos AS tr ON cos.fk_id_tipo_recursos = tr.id_tipo_recursos;`;
+export const listarCostos = async (req, res) => {
+  try {
+      // Obtener el admin_id del usuario autenticado
+      const adminId = req.usuario;
 
-    const [result] = await pool.query(sql);
-    if (result.length > 0) {
-      res.status(200).json(result);
-    }else{
-      res.status(404).json({'message': 'No se encontraron costos '});
-    }
-  } catch(error){
-    res.status(500).json({'status':500,'message':'error en el sistema: '+error});
+      let sql = `
+          SELECT cos.id_costos, cos.precio, 
+                 tr.nombre_recursos, tr.cantidad_medida, tr.unidades_medida, tr.extras, cos.estado
+          FROM costos AS cos
+          JOIN tipo_recursos AS tr ON cos.fk_id_tipo_recursos = tr.id_tipo_recursos
+          WHERE cos.admin_id = ?;
+      `;
+
+      const [result] = await pool.query(sql, [adminId]);
+      if (result.length > 0) {
+          res.status(200).json(result);
+      } else {
+          res.status(404).json({ 'message': 'No se encontraron costos' });
+      }
+  } catch (error) {
+      res.status(500).json({ 'status': 500, 'message': 'Error en el sistema: ' + error });
   }
-  };
-  export const registrar = async (req, res) =>{
-    try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-        
-        const { fk_id_tipo_recursos, precio } = req.body;
-  
-        let checkSql = `SELECT COUNT(*) AS count FROM tipo_recursos WHERE id_tipo_recursos = ?`;
-        const [checkResult] = await pool.query(checkSql, [fk_id_tipo_recursos]);
-        
-        if (checkResult[0].count === 0) {
-            return res.status(400).json({ status: 400, message: 'El valor de fk_id_tipo_recursos no existe en la tabla tipo_recursos' });
-        }
+};
 
-        // Modificamos la consulta de inserción para incluir el valor por defecto 'activo' para el campo estado
-        let sql =  `INSERT INTO costos (fk_id_tipo_recursos, precio, estado) VALUES (?, ?, 'activo')`;
-  
-        const [rows] = await pool.query(sql, [fk_id_tipo_recursos, precio]);
-        if (rows.affectedRows > 0) {
-            res.status(200).json({'status': 200, 'message': 'Registro exitoso de sus costos'});
-        } else {
-            res.status(403).json({'status': 403, 'message': 'Fallo el registro de sus costos'});
-        }
-    } catch(error) {
-        res.status(500).json({'status': 500, 'message': 'error en el sistema: ' + error});
-    }
+export const registrarCostos = async (req, res) => {
+  try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+          return res.status(400).json({ errors: errors.array() });
+      }
+      
+      const { fk_id_tipo_recursos, precio } = req.body;
+
+      // Obtener el admin_id del usuario autenticado
+      const adminId = req.usuario;
+
+      // Verificar si el fk_id_tipo_recursos existe en la tabla tipo_recursos
+      let checkSql = `SELECT COUNT(*) AS count FROM tipo_recursos WHERE id_tipo_recursos = ?`;
+      const [checkResult] = await pool.query(checkSql, [fk_id_tipo_recursos]);
+      
+      if (checkResult[0].count === 0) {
+          return res.status(400).json({ status: 400, message: 'El valor de fk_id_tipo_recursos no existe en la tabla tipo_recursos' });
+      }
+
+      // Modificar la consulta de inserción para incluir el admin_id
+      let sql =  `INSERT INTO costos (fk_id_tipo_recursos, precio, estado, admin_id) VALUES (?, ?, 'activo', ?)`;
+
+      const [rows] = await pool.query(sql, [fk_id_tipo_recursos, precio, adminId]);
+      if (rows.affectedRows > 0) {
+          res.status(200).json({'status': 200, 'message': 'Registro exitoso de sus costos'});
+      } else {
+          res.status(403).json({'status': 403, 'message': 'Fallo el registro de sus costos'});
+      }
+  } catch(error) {
+      res.status(500).json({'status': 500, 'message': 'error en el sistema: ' + error});
+  }
 };
 
 
+
+// CRUD - Actualizar costos
 export const actualizar = async (req, res) => {
   try {
-     const { id_costos } = req.params;
-     const { precio, fk_id_tipo_recursos } = req.body;
+    const { id_costos } = req.params;
+    const { precio, fk_id_tipo_recursos } = req.body;
 
-     if (!precio && !fk_id_tipo_recursos) {
+    // Verificar si al menos uno de los campos está presente en la solicitud
+    if (!precio && !fk_id_tipo_recursos) {
       return res.status(400).json({ message: 'Al menos uno de los campos (precio, fk_id_tipo_recursos) debe estar presente en la solicitud para realizar la actualización.' });
-     }
-     const errors = validationResult(req);
-     if (!errors.isEmpty()) {
-         return res.status(400).json({ errors: errors.array() });
-     }
- 
-     // Verificar si el valor de fk_id_tipo_recursos existe en la tabla tipo_recursos
-     let checkSql = `SELECT COUNT(*) AS count FROM tipo_recursos WHERE id_tipo_recursos = ?`;
-     const [checkResult] = await pool.query(checkSql, [fk_id_tipo_recursos]);
- 
-     if (checkResult[0].count === 0) {
-       return res.status(400).json({ status: 400, message: 'El valor de fk_id_tipo_recursos no existe en la tabla tipo_recursos' });
-     }
+    }
 
-     const [costosExist] = await pool.query('SELECT * FROM costos WHERE id_costos = ?', [id_costos]);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-     if (costosExist.length === 0) {
-         return res.status(404).json({
-             status: 404,
-             message: 'El costo no existe. Registre primero un costo.'
-         });
-     }
- 
-     let sql = `
-       UPDATE costos
-       SET fk_id_tipo_recursos = ?,
-           precio = ?
-       WHERE id_costos = ?
-     `;
- 
-     const [rows] = await pool.query(sql, [fk_id_tipo_recursos, precio, id_costos]);
- 
-     if (rows.affectedRows > 0) {
-       res.status(200).json({ status: 200, message: 'La información ha sido actualizada' });
-     } else {
-       res.status(404).json({ status: 404, message: 'No se pudo actualizar la información' });
-     }
+    // Obtener el ID del administrador que realiza la solicitud desde el token
+    const admin_id = req.usuario;
+
+    // Verificar si el valor de fk_id_tipo_recursos existe en la tabla tipo_recursos
+    let checkSql = `SELECT COUNT(*) AS count FROM tipo_recursos WHERE id_tipo_recursos = ?`;
+    const [checkResult] = await pool.query(checkSql, [fk_id_tipo_recursos]);
+
+    if (checkResult[0].count === 0) {
+      return res.status(400).json({ status: 400, message: 'El valor de fk_id_tipo_recursos no existe en la tabla tipo_recursos' });
+    }
+
+    // Verificar si el costo pertenece al administrador actual
+    const [costoExist] = await pool.query('SELECT * FROM costos WHERE id_costos = ? AND admin_id = ?', [id_costos, admin_id]);
+
+    if (costoExist.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: 'El costo no existe o no está autorizado para actualizar',
+      });
+    }
+
+    // Realizar la actualización en la base de datos
+    let sql = `
+      UPDATE costos
+      SET fk_id_tipo_recursos = ?,
+          precio = ?
+      WHERE id_costos = ? AND admin_id = ?
+    `;
+
+    const [rows] = await pool.query(sql, [fk_id_tipo_recursos, precio, id_costos, admin_id]);
+
+    if (rows.affectedRows > 0) {
+      res.status(200).json({ status: 200, message: 'La información ha sido actualizada' });
+    } else {
+      res.status(404).json({ status: 404, message: 'No se pudo actualizar la información' });
+    }
   } catch (error) {
-     res.status(500).json({ status: 500, message: 'Error en el sistema: ' + error });
+    res.status(500).json({ status: 500, message: 'Error en el sistema: ' + error });
   }
 };
+
 
    export const buscar = async (req, res) => {
     try {

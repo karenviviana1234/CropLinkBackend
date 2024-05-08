@@ -38,25 +38,69 @@ export const registrarUsuarios = async (req, res) => {
         message: 'Error del servidor' + error
       });
     }
-  };
+  }; 
 
+  export const registrarEmpleados = async (req, res) => {
+      try {
+          // Extraer datos del cuerpo de la solicitud
+          const { identificacion, nombre, apellido, correo, password } = req.body;
   
-  export const listarUsuarios = async (req, res) => {
+          // Verificar si se proporcionaron todos los datos necesarios
+          if (!identificacion || !nombre || !apellido || !correo || !password) {
+              return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+          }
+  
+          // Obtener la identificación del administrador que hace la solicitud desde el token, si está disponible
+          const admin_id = req.usuario
+  
+          // Realizar el registro del empleado en la base de datos
+          const query = `
+              INSERT INTO usuarios (identificacion, nombre, apellido, correo, password, rol, admin_id) 
+              VALUES (?, ?, ?, ?, ?, 'empleado', ?)
+          `;
+  
+          const values = [identificacion, nombre, apellido, correo, password, admin_id];
+  
+          // Ejecutar la consulta SQL
+          const [result] = await pool.query(query, values);
+  
+          // Retornar una respuesta de éxito
+          return res.status(200).json({ 
+              message: 'Empleado registrado exitosamente',
+              nombreRegistrado: nombre,
+              idAdministrador: admin_id
+          });
+      } catch (error) {
+          // Manejar errores
+          console.error('Error al registrar empleado:', error);
+          return res.status(500).json({ message: 'Error del servidor', error: error.message });
+      }
+  };
+  
+
+
+
+export const listarUsuarios = async (req, res) => {
     try {
-        const [result] = await pool.query('SELECT * FROM usuarios');
+        // Obtener la identificación del administrador que hace la solicitud desde el token
+        const adminId = req.usuario; // Aquí asumimos que la identificación del administrador está incluida en decoded.user
+
+        // Consultar la base de datos para obtener la lista de usuarios creados por el administrador actual
+        const [result] = await pool.query('SELECT * FROM usuarios WHERE admin_id = ?', [adminId]);
+
         if (result.length > 0) {
             res.status(200).json(result);
         } else {
             res.status(404).json({
                 status: 404,
-                message: 'No se encontraron usuarios registrados'
+                message: 'No se encontraron usuarios registrados por este administrador'
             });
         }
     } catch (error) {
         res.status(500).json({
             status: 500,
             message: 'Error en el sistema',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -80,11 +124,9 @@ export const buscarUsuario = async (req, res) => {
         res.status(500).json({ 
             status: 500, 
             message: 'Error en el sistema: ' + error 
-        });   
+        });
     }
 };
-
-
 export const actualizarUsuario = async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -145,6 +187,7 @@ export const desactivarUsuario = async (req, res) => {
     try {
         const { identificacion } = req.params;
 
+        // Obtener el estado actual del usuario
         const [currentUser] = await pool.query("SELECT estado FROM usuarios WHERE identificacion=?", [identificacion]);
         if (currentUser.length === 0) {
             return res.status(404).json({
@@ -156,12 +199,14 @@ export const desactivarUsuario = async (req, res) => {
         const estadoActual = currentUser[0].estado;
         let nuevoEstado = '';
 
+        // Determinar el nuevo estado
         if (estadoActual === 'activo') {
             nuevoEstado = 'inactivo';
         } else {
             nuevoEstado = 'activo';
         }
 
+        // Actualizar el estado del usuario en la base de datos
         const [result] = await pool.query("UPDATE usuarios SET estado=? WHERE identificacion=?", [nuevoEstado, identificacion]);
 
         if (result.affectedRows > 0) {
@@ -182,3 +227,26 @@ export const desactivarUsuario = async (req, res) => {
         });
     }
 };
+
+//listar todos los usuarios
+ /*  export const listarUsuarios = async (req, res) => {
+    try {
+        const [result] = await pool.query('SELECT * FROM usuarios');
+        if (result.length > 0) {
+            res.status(200).json(result);
+        } else {
+            res.status(404).json({
+                status: 404,
+                message: 'No se encontraron usuarios registrados'
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'Error en el sistema',
+            error: error.message // Se agrega el mensaje de error separado
+        });
+    }
+};
+ */
+ 

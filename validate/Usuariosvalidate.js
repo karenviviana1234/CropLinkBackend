@@ -4,8 +4,7 @@ export const validarUsuario = [
     check('identificacion', 'Identificacion es obligatorio y debe contener solo números')
     .not()
     .isEmpty()
-    .isNumeric()
-    .matches(/^[A-Za-z\s]+$/),
+    .isNumeric(),
 
     check('nombre', 'El nombre es obligatorio y debe contener solo letras, máximo 50 caracteres')
         .not()

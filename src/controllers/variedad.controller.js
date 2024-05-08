@@ -8,21 +8,37 @@ export const registrarVariedad = async (req, res) => {
         if (!errors.isEmpty()) {
             return res.status(400).json(errors);
         }
-        const estado = "activo"
+        
+        const estado = "activo";
         const { nombre_variedad, tipo_cultivo } = req.body;
 
-        const [result] = await pool.query("INSERT INTO variedad (nombre_variedad, tipo_cultivo,estado) VALUES (?, ?, ?)", [nombre_variedad, tipo_cultivo,estado]);
+        // Obtener el ID del administrador que realiza la solicitud desde el token
+        const admin_id = req.usuario;
+
+        // Verificar si el campo tipo_cultivo está presente en el cuerpo de la solicitud
+        if (!tipo_cultivo) {
+            return res.status(400).json({
+                status: 400,
+                message: "El campo 'tipo_cultivo' es obligatorio"
+            });
+        }
+
+        // Realizar el registro en la base de datos
+        const [result] = await pool.query(
+            "INSERT INTO variedad (nombre_variedad, tipo_cultivo, estado, admin_id) VALUES (?, ?, ?, ?)",
+            [nombre_variedad, tipo_cultivo, estado, admin_id]
+        );
 
         if (result.affectedRows > 0) {
             res.status(200).json({
                 status: 200,
-                message: 'Se registró con éxito',
-                result: result // Mostrar el objeto result completo
+                message: 'Se registró la variedad con éxito',
+                result: result
             });
         } else {
             res.status(403).json({
                 status: 403,
-                message: 'No se registró',
+                message: 'No se registró la variedad',
             });
         }
     } catch (error) {
@@ -36,13 +52,20 @@ export const registrarVariedad = async (req, res) => {
 // CRUD - Listar
 export const listarVariedades = async (req, res) => {
     try {
-        const [result] = await pool.query("SELECT * FROM variedad");
+        // Obtener el ID del administrador que realiza la solicitud desde el token
+        const admin_id = req.usuario;
+
+        // Consultar las variedades asociadas al administrador actual
+        const [result] = await pool.query(
+            "SELECT * FROM variedad WHERE admin_id = ?",
+            [admin_id]
+        );
 
         if (result.length > 0) {
             res.status(200).json(result);
         } else {
             res.status(400).json({
-                message: 'No hay ninguna variedad registrada'
+                message: 'No hay ninguna variedad registrada asociada a este administrador'
             });
         }
     } catch (error) {
@@ -51,6 +74,7 @@ export const listarVariedades = async (req, res) => {
         });
     }
 };
+
 
 // CRUD - Actualizar
 export const actualizarVariedad = async (req, res) => {
@@ -65,23 +89,27 @@ export const actualizarVariedad = async (req, res) => {
         if (!nombre_variedad && !tipo_cultivo) {
             return res.status(400).json({ message: 'Al menos uno de los campos (nombre_variedad, tipo_cultivo) debe estar presente en la solicitud para realizar la actualización.' });
         }
-        // Realiza una consulta para obtener la variedad antes de actualizarla
-        const [oldVariedad] = await pool.query("SELECT * FROM variedad WHERE id_variedad=?", [id]);
+
+        // Obtener el ID del administrador que realiza la solicitud desde el token
+        const admin_id = req.usuario;
+
+        // Realizar una consulta para verificar si la variedad pertenece al administrador actual
+        const [oldVariedad] = await pool.query("SELECT * FROM variedad WHERE id_variedad=? AND admin_id=?", [id, admin_id]);
 
         if (oldVariedad.length === 0) {
             return res.status(404).json({
                 status: 404,
-                message: 'Variedad no encontrada',
+                message: 'Variedad no encontrada o no autorizada para actualizar',
             });
         }
 
-        // Realiza la actualización en la base de datos
+        // Realizar la actualización en la base de datos
         const [result] = await pool.query(
             `UPDATE variedad 
             SET nombre_variedad = ${nombre_variedad ? `'${nombre_variedad}'` : `'${oldVariedad[0].nombre_variedad}'`}, 
             tipo_cultivo = ${tipo_cultivo ? `'${tipo_cultivo}'` : `'${oldVariedad[0].tipo_cultivo}'`} 
-            WHERE id_variedad = ?`,
-            [id]
+            WHERE id_variedad = ? AND admin_id = ?`,
+            [id, admin_id]
         );
 
         if (result.affectedRows > 0) {
@@ -92,7 +120,7 @@ export const actualizarVariedad = async (req, res) => {
         } else {
             res.status(403).json({
                 status: 403,
-                message: 'No se encontró el registro para actualizar',
+                message: 'No se encontró el registro para actualizar o no está autorizado para realizar la actualización',
             });
         }
     } catch (error) {

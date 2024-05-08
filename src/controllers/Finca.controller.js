@@ -5,22 +5,33 @@ import { validationResult } from 'express-validator';
 //crid
 export const listarFinca = async (req, res) => {
     try {
+        // Obtener la identificación del administrador desde el token
+        const adminId = req.usuario;
 
-        const [result] = await pool.query("SELECT * FROM finca")
+        if (!adminId) {
+            return res.status(403).json({ message: 'No se proporcionó la identificación del administrador en el token' });
+        }
+
+        // Consultar las fincas del administrador actual
+        const [result] = await pool.query("SELECT * FROM finca WHERE admin_id = ?", [adminId]);
 
         if (result.length > 0) {
-            res.status(200).json(result)
+            return res.status(200).json(result);
         } else {
-            res.status(400).json({
-                "Mensaje": "No hay fincas"
-            })
+            return res.status(404).json({
+                status: 404,
+                message: 'No se encontraron fincas registradas por este administrador'
+            });
         }
     } catch (error) {
-        res.status(500).json({
-            "Mensaje": "error en el sistema"
-        })
+        console.error("Error al listar fincas del administrador:", error);
+        return res.status(500).json({
+            status: 500,
+            message: 'Error en el sistema al listar fincas del administrador'
+        });
     }
-}
+};
+
 
 //crud Registrar
 export const RegistroFinca = async (req, res) => {
@@ -32,8 +43,12 @@ export const RegistroFinca = async (req, res) => {
 
         const { nombre_finca, longitud, latitud } = req.body;
 
+        // Obtener la identificación del administrador desde el token
+        const admin_id = req.usuario
+  
+
         // Modifica la consulta SQL para incluir el valor predeterminado del estado activo
-        const [result] = await pool.query("INSERT INTO finca (nombre_finca, longitud, latitud, estado) VALUES (?, ?, ?, 'activo')", [nombre_finca, longitud, latitud]);
+        const [result] = await pool.query("INSERT INTO finca (nombre_finca, longitud, latitud, estado, admin_id) VALUES (?, ?, ?, 'activo', ?)", [nombre_finca, longitud, latitud, admin_id]);
 
         if (result.affectedRows > 0) {
             res.status(200).json({
@@ -54,8 +69,6 @@ export const RegistroFinca = async (req, res) => {
         });
     }
 }
-
-//actualizar
 export const ActualizarFinca = async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -66,18 +79,21 @@ export const ActualizarFinca = async (req, res) => {
         const { id } = req.params;
         const { nombre_finca, longitud, latitud } = req.body;
 
+        // Obtener la identificación del administrador desde el token
+        const admin_id = req.usuario;
+
         // Verifica si al menos uno de los campos está presente en la solicitud
         if (!nombre_finca && !longitud && !latitud) {
             return res.status(400).json({ message: 'Al menos uno de los campos (nombre_finca, longitud, latitud) debe estar presente en la solicitud para realizar la actualización.' });
         }
 
-        console.log("Consulta SQL:", `SELECT * FROM finca WHERE id_finca=${id}`);
-
+        // Consulta la finca existente para obtener su estado actual
         const [oldFinca] = await pool.query("SELECT * FROM finca WHERE id_finca=?", [id]);
 
+        // Actualiza la finca con los valores proporcionados y el admin_id del usuario autenticado
         const [result] = await pool.query(
-            `UPDATE finca SET nombre_finca = ${nombre_finca ? `'${nombre_finca}'` : `'${oldFinca[0].nombre_finca}'`}, longitud = ${longitud ? `'${longitud}'` : `'${oldFinca[0].longitud}'`}, latitud = ${latitud ? `'${latitud}'` : `'${oldFinca[0].latitud}'`} WHERE id_finca = ?`,
-            [id]
+            `UPDATE finca SET nombre_finca=?, longitud=?, latitud=?, admin_id=? WHERE id_finca=?`,
+            [nombre_finca || oldFinca[0].nombre_finca, longitud || oldFinca[0].longitud, latitud || oldFinca[0].latitud, admin_id, id]
         );
 
         if (result.affectedRows > 0) {
@@ -100,6 +116,7 @@ export const ActualizarFinca = async (req, res) => {
         });
     }
 };
+
 
 // CRUD - Buscar
 export const BuscarFinca = async (req, res) => {

@@ -4,18 +4,23 @@ import { validationResult } from "express-validator";
 //listar raa
 export const listarA = async (req, res) => {
   try {
-    let sql = `SELECT ac.id_actividad, 
-                            ac.nombre_actividad, 
-                            ac.tiempo, 
-                            ac.observaciones,
-                            ac.valor_actividad,  
-                            v.nombre_variedad,
-                            ac.observacion,
-                            ac.estado
-                    FROM Actividad AS ac 
-                    JOIN variedad AS v ON ac.fk_id_variedad = v.id_variedad`;
+    // Obtener el ID del administrador que realiza la solicitud desde el token
+    const admin_id = req.usuario;
 
-    const [result] = await pool.query(sql);
+    let sql = `
+      SELECT ac.id_actividad, 
+             ac.nombre_actividad, 
+             ac.tiempo, 
+             ac.observaciones,
+             ac.valor_actividad,  
+             v.nombre_variedad,
+             ac.observacion,
+             ac.estado
+      FROM Actividad AS ac 
+      JOIN variedad AS v ON ac.fk_id_variedad = v.id_variedad
+      WHERE ac.admin_id = ?`; // Agregar la condición para filtrar por admin_id
+
+    const [result] = await pool.query(sql, [admin_id]); // Pasar admin_id como parámetro
 
     if (result.length > 0) {
       res.status(200).json(result);
@@ -31,13 +36,14 @@ export const listarA = async (req, res) => {
     });
   }
 };
+
 export const RegistrarA = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json(errors);
     }
-
+    
     const {
       nombre_actividad,
       tiempo,
@@ -55,6 +61,9 @@ export const RegistrarA = async (req, res) => {
       });
     }
 
+    // Obtener el ID del administrador que realiza la solicitud desde el token
+    const admin_id = req.usuario;
+
     const [variedadExist] = await pool.query(
       "SELECT * FROM variedad WHERE id_variedad = ?",
       [fk_id_variedad]
@@ -68,7 +77,7 @@ export const RegistrarA = async (req, res) => {
     }
 
     const [result] = await pool.query(
-      "INSERT INTO actividad (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO actividad (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado, admin_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [
         nombre_actividad,
         tiempo,
@@ -76,6 +85,7 @@ export const RegistrarA = async (req, res) => {
         fk_id_variedad,
         valor_actividad,
         estado,
+        admin_id, // Agregar el admin_id al array de valores para la inserción
       ]
     );
 
@@ -99,12 +109,14 @@ export const RegistrarA = async (req, res) => {
   }
 };
 
+
 export const ActualizarA = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
+
     const { id } = req.params;
     const {
       nombre_actividad,
@@ -115,6 +127,8 @@ export const ActualizarA = async (req, res) => {
       observacion,
       estado,
     } = req.body;
+
+    // Verifica si al menos uno de los campos está presente en la solicitud
     if (
       !nombre_actividad &&
       !tiempo &&
@@ -124,57 +138,40 @@ export const ActualizarA = async (req, res) => {
       !observacion &&
       !estado
     ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Al menos uno de los campos (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, observacion, estado) debe estar presente en la solicitud para realizar la actualización.",
-        });
+      return res.status(400).json({
+        message:
+          "Al menos uno de los campos (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, observacion, estado) debe estar presente en la solicitud para realizar la actualización.",
+      });
     }
-    // Realiza una consulta para obtener la variedad de cultivo antes de actualizarla
+
+    // Obtener el ID del administrador que realiza la solicitud desde el token
+    const admin_id = req.usuario;
+
+    // Verificar si la actividad a actualizar pertenece al administrador que está realizando la solicitud
     const [oldActividad] = await pool.query(
-      "SELECT * FROM actividad WHERE id_actividad=?",
-      [id]
+      "SELECT * FROM actividad WHERE id_actividad=? AND admin_id=?",
+      [id, admin_id]
     );
 
     if (oldActividad.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "Actividad no encontrada",
+        message: "Actividad no encontrada o no autorizada para actualizar",
       });
     }
-    // Realiza la actualización en la base de datos
+
+    // Realizar la actualización en la base de datos
     const [result] = await pool.query(
       `UPDATE actividad
-SET nombre_actividad = ${
-        nombre_actividad
-          ? `'${nombre_actividad}'`
-          : `'${oldActividad[0].nombre_actividad}'`
-      }, 
-tiempo = ${tiempo !== undefined ? `'${tiempo}'` : "tiempo"},
-observacion = ${
-        observacion ? `'${observacion}'` : `'${oldActividad[0].observacion}'`
-      },
-observaciones = ${
-        observaciones
-          ? `'${observaciones}'`
-          : `'${oldActividad[0].observaciones}'`
-      },
-fk_id_variedad = ${
-        fk_id_variedad
-          ? `'${fk_id_variedad}'`
-          : `'${oldActividad[0].fk_id_variedad}'`
-      },
-valor_actividad = ${
-        valor_actividad
-          ? `'${valor_actividad}'`
-          : `'${oldActividad[0].valor_actividad}'`
-      },
-observacion = ${
-        observacion ? `'${observacion}'` : `'${oldActividad[0].observacion}'`
-      },
-estado = ${estado ? `'${estado}'` : `'${oldActividad[0].estado}'`}
-WHERE id_actividad = ${id}`
+      SET 
+      nombre_actividad = ${nombre_actividad ? `'${nombre_actividad}'` : "nombre_actividad"},
+      tiempo = ${tiempo !== undefined ? `'${tiempo}'` : "tiempo"},
+      observacion = ${observacion ? `'${observacion}'` : "observacion"},
+      observaciones = ${observaciones ? `'${observaciones}'` : "observaciones"},
+      fk_id_variedad = ${fk_id_variedad ? `'${fk_id_variedad}'` : "fk_id_variedad"},
+      valor_actividad = ${valor_actividad ? `'${valor_actividad}'` : "valor_actividad"},
+      estado = ${estado ? `'${estado}'` : "estado"}
+      WHERE id_actividad = ${id}`
     );
 
     if (result.affectedRows > 0) {
@@ -195,6 +192,7 @@ WHERE id_actividad = ${id}`
     });
   }
 };
+
 
 
 

@@ -10,22 +10,31 @@ export const registrarProgramacion = async (req, res) => {
     }
 
     const {
-      fecha_inicio,fecha_fin,fk_identificacion,fk_id_actividad,fk_id_cultivo,estado} = req.body;
+      fecha_inicio,
+      fecha_fin,
+      fk_identificacion,
+      fk_id_actividad,
+      fk_id_cultivo,
+      estado
+    } = req.body;
 
-   
-         // Verificar si el campo estado está presente en el cuerpo de la solicitud
+    // Obtener el admin_id del usuario autenticado
+    const adminId = req.usuario;
+
+    // Verificar si el campo estado está presente en el cuerpo de la solicitud
     if (!estado) {
       return res.status(400).json({
         status: 400,
         message: "El campo 'estado' es obligatorio"
       });
     }
-    // Verificar si el usuario existe
-    const [usuarioExist] = await pool.query("SELECT * FROM usuarios WHERE identificacion = ?",[fk_identificacion]);
+
+    // Verificar si el usuario existe y pertenece al admin_id
+    const [usuarioExist] = await pool.query("SELECT * FROM usuarios WHERE identificacion = ? AND admin_id = ?", [fk_identificacion, adminId]);
     if (usuarioExist.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "El usuario no existe. Registre primero un usuario."
+        message: "El usuario no existe o no está autorizado para registrar programaciones."
       });
     }
 
@@ -55,20 +64,19 @@ export const registrarProgramacion = async (req, res) => {
 
     // Insertar la programación
     const [result] = await pool.query(
-      "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo) VALUES (?,?,?,?,?,?)",
-      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo,estado ]
+      "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo, admin_id) VALUES (?,?,?,?,?,?,?)",
+      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo, adminId]
     );
 
     if (result.affectedRows > 0) {
       return res.status(200).json({
         status: 200,
-        message: "Se registró con éxito",
-
+        message: "Se registró con éxito"
       });
     } else {
       return res.status(403).json({
         status: 403,
-        message: "No se registró ",
+        message: "No se registró"
       });
     }
   } catch (error) {
@@ -82,9 +90,13 @@ export const registrarProgramacion = async (req, res) => {
 
 
 
+
 // CRUD - Listar
 export const listarProgramacion = async (req, res) => {
   try {
+    // Obtener el admin_id del usuario autenticado
+    const adminId = req.usuario;
+
     let sql = `SELECT 
         p.id_programacion, 
         p.fecha_inicio,
@@ -103,10 +115,12 @@ export const listarProgramacion = async (req, res) => {
     JOIN 
         variedad AS v ON a.fk_id_variedad = v.id_variedad
     JOIN 
-        lotes AS l ON p.fk_id_cultivo = l.id_lote;
+        lotes AS l ON p.fk_id_cultivo = l.id_lote
+    WHERE 
+        u.admin_id = ?;
     `;
 
-    const [result] = await pool.query(sql);
+    const [result] = await pool.query(sql, [adminId]);
 
     if (result.length > 0) {
       res.status(200).json(result);
@@ -122,6 +136,7 @@ export const listarProgramacion = async (req, res) => {
     });
   }
 };
+
 
 
 //actualizar
@@ -142,15 +157,18 @@ export const actualizarProgramacion = async (req, res) => {
       estado
     } = req.body;
 
-    // Verificar si el usuario existe
+    // Obtener el admin_id del usuario autenticado
+    const adminId = req.usuario;
+
+    // Verificar si el usuario existe y pertenece al administrador actual
     const [usuarioExist] = await pool.query(
-      "SELECT * FROM usuarios WHERE identificacion = ?",
-      [fk_identificacion]
+      "SELECT * FROM usuarios WHERE identificacion = ? AND admin_id = ?",
+      [fk_identificacion, adminId]
     );
     if (usuarioExist.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "El usuario no existe, registre un usuario",
+        message: "El usuario no existe o no está autorizado para actualizar",
       });
     }
 
@@ -162,7 +180,7 @@ export const actualizarProgramacion = async (req, res) => {
     if (actividadExist.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "La actividad no existe, registre una actividad",
+        message: "La actividad no existe. Registre primero una actividad.",
       });
     }
 
@@ -174,7 +192,7 @@ export const actualizarProgramacion = async (req, res) => {
     if (cultivoExist.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "El cultivo no existe, registre un cultivo",
+        message: "El cultivo no existe. Registre primero un cultivo.",
       });
     }
 
@@ -182,7 +200,7 @@ export const actualizarProgramacion = async (req, res) => {
     const [result] = await pool.query(
       `UPDATE programacion 
             SET fecha_inicio = ?, fecha_fin = ?, fk_identificacion = ?, fk_id_actividad = ?, fk_id_cultivo = ?, estado = ? 
-            WHERE id_programacion = ?`,
+            WHERE id_programacion = ? AND fk_identificacion = ?`,
       [
         fecha_inicio,
         fecha_fin,
@@ -191,6 +209,7 @@ export const actualizarProgramacion = async (req, res) => {
         fk_id_cultivo,
         estado,
         id,
+        fk_identificacion,
       ]
     );
 
@@ -202,7 +221,7 @@ export const actualizarProgramacion = async (req, res) => {
     } else {
       return res.status(404).json({
         status: 404,
-        message: "No se encontró la programación para actualizar",
+        message: "No se encontró la programación para actualizar o no está autorizado para realizar la actualización",
       });
     }
   } catch (error) {
@@ -212,6 +231,7 @@ export const actualizarProgramacion = async (req, res) => {
     });
   }
 };
+
 
 
 

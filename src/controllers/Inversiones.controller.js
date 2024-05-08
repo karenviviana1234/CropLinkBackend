@@ -1,7 +1,11 @@
 import { pool } from "../database/conexion.js";
 import { validationResult } from 'express-validator';
+
 export const listarInversiones = async (req, res) => {
     try {
+        // Obtener el admin_id del usuario autenticado
+        const adminId = req.usuario;
+
         let sql = `
             SELECT 
                 inver.id_inversiones AS id_inversiones,
@@ -27,10 +31,12 @@ export const listarInversiones = async (req, res) => {
                 JOIN cultivo AS cu ON pro.fk_id_cultivo = cu.id_cultivo
                 JOIN lotes AS l ON cu.fk_id_lote = l.id_lote
                 JOIN variedad AS v ON cu.fk_id_variedad = v.id_variedad
+            WHERE 
+                pro.admin_id = ?
             GROUP BY 
                 inver.id_inversiones`;
 
-        const [result] = await pool.query(sql);
+        const [result] = await pool.query(sql, [adminId]);
 
         if (result.length > 0) {
             res.status(200).json(result);
@@ -45,34 +51,38 @@ export const listarInversiones = async (req, res) => {
 
 export const registrarInversiones = async (req, res) => {
     try {
-        const error = validationResult(req);
+        const errors = validationResult(req);
 
-        if (!error.isEmpty()) {
-            return res.status(400).json({
-                errors: error.array()
-            });
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
 
         const { fk_id_programacion, fk_id_costos } = req.body;
 
+        // Obtener el admin_id del usuario autenticado
+        const adminId = req.usuario;
+
+        // Verificar si el costo existe
         const [costoExist] = await pool.query('SELECT * FROM costos WHERE id_costos = ?', [fk_id_costos]);
 
         if (costoExist.length === 0) {
             return res.status(404).json({
                 status: 404,
-                message: 'Id costo no existe. Registre primero un costo.'
+                message: 'El ID de costo no existe. Registre primero un costo.'
             });
         }
 
-        const [loteExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ?', [fk_id_programacion]);
+        // Verificar si la programación existe y pertenece al admin_id
+        const [programacionExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ? AND admin_id = ?', [fk_id_programacion, adminId]);
 
-        if (loteExist.length === 0) {
+        if (programacionExist.length === 0) {
             return res.status(404).json({
                 status: 404,
-                message: 'La programación no existe. Registre primero una programación.'
+                message: 'La programación no existe o no está autorizada para este administrador. Registre primero una programación.'
             });
         }
 
+        // Obtener información del costo y tipo de recurso
         const [costoInfo] = await pool.query('SELECT precio FROM costos WHERE id_costos = ?', [fk_id_costos]);
         const [tipoRecursoInfo] = await pool.query('SELECT cantidad_medida FROM tipo_recursos WHERE id_tipo_recursos = ?', [fk_id_costos]);
 
@@ -80,17 +90,18 @@ export const registrarInversiones = async (req, res) => {
         const cantidadMedida = tipoRecursoInfo[0].cantidad_medida;
         const valor_inversion = precio * cantidadMedida;
 
-        const [Registrar] = await pool.query('INSERT INTO inversiones (fk_id_programacion, fk_id_costos, valor_inversion) VALUES (?, ?, ?)', [fk_id_programacion, fk_id_costos, valor_inversion]);
+        // Insertar la inversión
+        const [Registrar] = await pool.query('INSERT INTO inversiones (fk_id_programacion, fk_id_costos, valor_inversion,admin_id) VALUES (?, ?, ?,?)', [fk_id_programacion, fk_id_costos, valor_inversion,admin_id]);
 
         if (Registrar.affectedRows > 0) {
             res.status(200).json({
                 status: 200,
-                message: 'Se registró correctamente'
+                message: 'Se registró correctamente la inversión.'
             });
         } else {
             res.status(400).json({
                 status: 400,
-                message: 'Campo obligatorio'
+                message: 'No se pudo registrar la inversión.'
             });
         }
     } catch (error) {
@@ -105,38 +116,44 @@ export const registrarInversiones = async (req, res) => {
 
 export const actualizarInversiones = async (req, res) => {
     try {
-        const error = validationResult(req);
-        if (!error.isEmpty()) {
-            return res.status(400).json({ error: error.array() });
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
 
         const { id_inversiones } = req.params;
         const { fk_id_costos, fk_id_programacion } = req.body;
 
+        // Verificar si la inversión existe
+        const [inversionExist] = await pool.query('SELECT * FROM inversiones WHERE id_inversiones = ?', [id_inversiones]);
+
+        if (inversionExist.length === 0) {
+            return res.status(404).json({ status: 404, message: 'La inversión no se encontró.' });
+        }
+
+        // Obtener el admin_id del usuario autenticado
+        const adminId = req.usuario;
+
+        // Verificar si el costo existe y pertenece al administrador
         if (fk_id_costos) {
-            const [costoExist] = await pool.query('SELECT * FROM costos WHERE id_costos = ?', [fk_id_costos]);
+            const [costoExist] = await pool.query('SELECT * FROM costos WHERE id_costos = ? AND admin_id = ?', [fk_id_costos, adminId]);
             if (costoExist.length === 0) {
                 return res.status(404).json({
                     status: 404,
-                    message: 'Id costo no existe. Registre primero un costo.'
+                    message: 'El ID de costo no existe o no está autorizado para este administrador. Registre primero un costo.'
                 });
             }
         }
 
+        // Verificar si la programación existe y pertenece al administrador
         if (fk_id_programacion) {
-            const [programacionExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ?', [fk_id_programacion]);
+            const [programacionExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ? AND admin_id = ?', [fk_id_programacion, adminId]);
             if (programacionExist.length === 0) {
                 return res.status(404).json({
                     status: 404,
-                    message: 'La programacion no existe. Registre primero una programacion.'
+                    message: 'El ID de programación no existe o no está autorizado para este administrador. Registre primero una programación.'
                 });
             }
-        }
-
-        const [inversionExist] = await pool.query('SELECT * FROM inversiones WHERE id_inversiones=?', [id_inversiones]);
-
-        if (inversionExist.length === 0) {
-            return res.status(400).json({ status: 400, message: 'Inversion no encontrada.' });
         }
 
         const updateValues = {
@@ -150,7 +167,7 @@ export const actualizarInversiones = async (req, res) => {
 
         if (result.affectedRows > 0) {
             res.status(200).json({
-                mensaje: 'Ha sido actualizado.'
+                message: 'La inversión ha sido actualizada.'
             });
         } else {
             res.status(400).json({
