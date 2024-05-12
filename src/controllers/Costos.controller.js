@@ -174,7 +174,7 @@ export const desactivarcosto = async (req, res) => {
     if (result.affectedRows > 0) {
       res.status(200).json({
         status: 200,
-        mensaje: `El lote con el id ${id_costos} ha sido ${newState === 'activo' ? 'activado' : 'desactivado'}.`,
+        message: "El estado del costo ha sido cambiado a " + nuevoEstado + ".",
       });
     } else {
       res.status(404).json({

@@ -188,7 +188,7 @@ export const desactivarVariedad = async (req, res) => {
         if (result.affectedRows > 0) {
             res.status(200).json({
                 status: 200,
-                message: `El estado de la variedad con el id ${id_variedad} ha sido cambiado a ${newState}.`,
+                message: "El estado la variedad ha sido cambiado a " + nuevoEstado + ".",
             });
         } else {
             res.status(404).json({

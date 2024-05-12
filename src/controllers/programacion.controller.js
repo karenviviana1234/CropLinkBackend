@@ -256,7 +256,7 @@ export const actualizarProgramacion = async (req, res) => {
       if (result.affectedRows > 0) {
         res.status(200).json({
           status: 200,
-          message: `El estado se realizó correctamente y ahora es ${nuevoEstado}`,
+          message: "El estado de la programación ha sido cambiado a " + nuevoEstado + ".",
         });
       } else {
         res.status(404).json({

@@ -220,7 +220,7 @@ export const desactivarlote = async (req, res) => {
       if (result.affectedRows > 0) {
           res.status(200).json({
               status: 200,
-              mensaje: "El estado del lote con el ID " + id_lote + " ha sido cambiado a " + nuevoEstado + ".",
+              message: "El estado del lote ha sido cambiado a " + nuevoEstado + ".",
           });
       } else {
           res.status(500).json({
