@@ -158,7 +158,10 @@ export const desactivarVariedad = async (req, res) => {
     try {
         const { id_variedad } = req.params;
 
-        // Consultar el estado actual de la variedad
+        // Inicia una transacción
+        await pool.query("START TRANSACTION");
+
+        // Consulta el estado actual de la variedad
         const [currentResult] = await pool.query(
             "SELECT estado FROM variedad WHERE id_variedad = ?",
             [id_variedad]
@@ -166,6 +169,7 @@ export const desactivarVariedad = async (req, res) => {
 
         // Verificar si se encontró la variedad
         if (currentResult.length === 0) {
+            await pool.query("ROLLBACK");
             return res.status(404).json({
                 status: 404,
                 message: "La variedad con el id " + id_variedad + " no fue encontrada",
@@ -175,28 +179,39 @@ export const desactivarVariedad = async (req, res) => {
         // Obtener el estado actual de la variedad
         const currentState = currentResult[0].estado;
 
-        // Cambiar el estado de la variedad
-        const newState = currentState === 'activo' ? 'inactivo' : 'activo';
-
-        // Actualizar el estado en la base de datos
-        const [result] = await pool.query(
-            "UPDATE variedad SET estado = ? WHERE id_variedad = ?",
-            [newState, id_variedad]
+        // Consultar las actividades asociadas a la variedad
+        const [activitiesResult] = await pool.query(
+            "SELECT id_actividad, estado FROM actividad WHERE fk_id_variedad = ?",
+            [id_variedad]
         );
 
-        // Verificar si se realizó la actualización correctamente
-        if (result.affectedRows > 0) {
-            res.status(200).json({
-                status: 200,
-                message: "El estado la variedad ha sido cambiado a " + nuevoEstado + ".",
-            });
-        } else {
-            res.status(404).json({
-                status: 404,
-                message: "No se pudo cambiar el estado de la variedad",
-            });
+        // Cambiar el estado de la variedad
+        const nuevoEstado = currentState === 'activo' ? 'inactivo' : 'activo';
+
+        // Actualizar el estado de la variedad en la base de datos
+        await pool.query(
+            "UPDATE variedad SET estado = ? WHERE id_variedad = ?",
+            [nuevoEstado, id_variedad]
+        );
+
+        // Actualizar el estado de las actividades asociadas
+        for (const activity of activitiesResult) {
+            await pool.query(
+                "UPDATE actividad SET estado = ? WHERE id_actividad = ?",
+                [nuevoEstado, activity.id_actividad]
+            );
         }
+
+        // Confirmar la transacción
+        await pool.query("COMMIT");
+
+        res.status(200).json({
+            status: 200,
+            message: "El estado de la variedad ha sido cambiado a " + nuevoEstado + ".",
+            });
     } catch (error) {
+        // Si ocurre un error, deshace la transacción
+        await pool.query("ROLLBACK");
         res.status(500).json({
             status: 500,
             message: "Error en el sistema: " + error,

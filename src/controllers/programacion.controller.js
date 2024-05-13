@@ -237,40 +237,74 @@ export const actualizarProgramacion = async (req, res) => {
 
 // CRUD - Estado
 
-  export const estadoProgramacion = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { estado } = req.body;
-      const [oldTipoRecurso] = await pool.query(
-        "SELECT * FROM programacion WHERE id_programacion=?",
-        [id]
-      );
 
-      const nuevoEstado = estado || (oldTipoRecurso[0].estado === 'activo' ? 'inactivo' : 'activo');
+export const estadoProgramacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
 
-      const [result] = await pool.query(
-        `UPDATE programacion SET estado = ? WHERE id_programacion=?`,
-        [nuevoEstado, id]
-      );
-      
-      if (result.affectedRows > 0) {
-        res.status(200).json({
-          status: 200,
-          message: "El estado de la programación ha sido cambiado a " + nuevoEstado + ".",
-        });
-      } else {
-        res.status(404).json({
-          status: 404,
-          message: "El estado no se realizó correctamente",
-        });
-      }
-    } catch (error) {
-      res.status(500).json({
-        status: 500,
-        message: error.message || "Error interno del servidor",
+    // Consulta el estado actual del usuario asociado a la programación
+    const [usuario] = await pool.query("SELECT estado FROM usuarios WHERE identificacion = (SELECT fk_identificacion FROM programacion WHERE id_programacion = ?)", [id]);
+
+    // Verifica si se encontró el usuario asociado
+    if (usuario.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: 'No se pudo encontrar el usuario asociado a la programación',
       });
     }
-  };
+
+    // Verifica si el usuario asociado está activo
+    if (usuario[0].estado === 'inactivo') {
+      return res.status(400).json({
+        status: 400,
+        message: 'No se puede cambiar el estado de la programación porque el usuario asociado está inactivo',
+      });
+    }
+
+    // Consulta el estado actual del cultivo asociado a la programación
+    const [cultivo] = await pool.query("SELECT estado FROM cultivo WHERE id_cultivo = (SELECT fk_id_cultivo FROM programacion WHERE id_programacion = ?)", [id]);
+
+    // Verifica si se encontró el cultivo asociado
+    if (cultivo.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: 'No se pudo encontrar el cultivo asociado a la programación',
+      });
+    }
+
+    // Verifica si el cultivo asociado está activo
+    if (cultivo[0].estado === 'inactivo') {
+      return res.status(400).json({
+        status: 400,
+        message: 'No se puede cambiar el estado de la programación porque el cultivo asociado está inactivo',
+      });
+    }
+
+    // Determina el nuevo estado
+    const nuevoEstado = estado || (cultivo[0].estado === 'activo' ? 'inactivo' : 'activo');
+
+    // Actualiza el estado de la programación
+    const [result] = await pool.query("UPDATE programacion SET estado = ? WHERE id_programacion = ?", [nuevoEstado, id]);
+
+    if (result.affectedRows > 0) {
+      res.status(200).json({
+        status: 200,
+        message: `El estado se actualizó correctamente y ahora es ${nuevoEstado}`,
+      });
+    } else {
+      res.status(404).json({
+        status: 404,
+        message: "El estado no se actualizó correctamente",
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: 500,
+      message: error.message || "Error interno del servidor",
+    });
+  }
+};
 
 
 // CRUD -buscar

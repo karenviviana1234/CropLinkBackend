@@ -242,77 +242,78 @@ export const buscar = async (req, res) => {
       .json({ status: 500, message: "Error en el sistema: " + error });
   }
 };
+
 export const desactivar = async (req, res) => {
   try {
-    const { id_cultivo } = req.params;
+      const { id_cultivo } = req.params;
 
-    // Consultar el estado actual del cultivo, el ID del lote asociado y el ID de la variedad asociada
-    const [cultivo] = await pool.query(
-      "SELECT estado, fk_id_lote, fk_id_variedad FROM cultivo WHERE id_cultivo = ?",
-      [id_cultivo]
-    );
+      // Inicia una transacción
+      await pool.query("START TRANSACTION");
 
-    if (cultivo.length > 0) {
-      const estadoActual = cultivo[0].estado;
-      const fk_id_lote = cultivo[0].fk_id_lote;
-      const fk_id_variedad = cultivo[0].fk_id_variedad;
+      // Consulta el estado actual del lote asociado al cultivo por su ID
+      const [lote] = await pool.query("SELECT estado FROM lotes WHERE id_lote = (SELECT fk_id_lote FROM cultivo WHERE id_cultivo = ?)", [id_cultivo]);
 
-      // Consultar el estado actual del lote asociado
-      const [lote] = await pool.query(
-        "SELECT estado FROM lotes WHERE id_lote = ?",
-        [fk_id_lote]
-      );
-
-      // Consultar el estado actual de la variedad asociada
-      const [variedad] = await pool.query(
-        "SELECT estado FROM variedad WHERE id_variedad = ?",
-        [fk_id_variedad]
-      );
-
-      // Verificar si el estado del lote o de la variedad están inactivos para no permitir activar el cultivo
-      if (
-        (lote.length > 0 && lote[0].estado === "inactivo") ||
-        (variedad.length > 0 && variedad[0].estado === "inactivo")
-      ) {
-        return res.status(403).json({
-          status: 403,
-          message:
-            "No se puede cambiar el estado del cultivo porque el lote o la variedad asociada está inactiva",
-        });
+      // Verifica si se encontró el lote asociado al cultivo
+      if (lote.length === 0) {
+          await pool.query("ROLLBACK"); // Si no se encontró el lote asociado, deshace la transacción
+          return res.status(404).json({
+              status: 404,
+              message: 'No se pudo encontrar el lote asociado al cultivo',
+          });
       }
 
-      // Determinar el nuevo estado del cultivo
-      const nuevoEstado = estadoActual === "activo" ? "inactivo" : "activo";
+      // Verifica si el lote asociado está activo
+      if (lote[0].estado !== 'activo') {
+          await pool.query("ROLLBACK"); // Si el lote asociado no está activo, deshace la transacción
+          return res.status(400).json({
+              status: 400,
+              message: 'No se puede cambiar el estado del cultivo porque el lote asociado está inactivo',
+          });
+      }
 
-      // Actualizar el estado del cultivo en la base de datos
-      const [result] = await pool.query(
-        "UPDATE cultivo SET estado = ? WHERE id_cultivo = ?",
-        [nuevoEstado, id_cultivo]
-      );
+      // Consulta el estado actual del cultivo por su ID
+      const [cultivo] = await pool.query("SELECT * FROM cultivo WHERE id_cultivo = ?", [id_cultivo]);
 
-      if (result.affectedRows > 0) {
-        res.status(200).json({
-          status: 200,
-          message: "El estado del cultivo ha sido cambiado a " + nuevoEstado + ".",
-        });
+      // Verifica si se encontró el cultivo
+      if (cultivo.length === 0) {
+          await pool.query("ROLLBACK"); // Si no se encontró, deshace la transacción
+          return res.status(404).json({
+              status: 404,
+              message: 'Cultivo no encontrado',
+          });
+      }
+
+      // Determina el nuevo estado
+      let nuevoEstado;
+      if (cultivo[0].estado === 'activo') {
+          nuevoEstado = 'inactivo'; // Si estaba activo, se desactiva
       } else {
-        res.status(404).json({
-          status: 404,
-          message: "No se encontró el cultivo para desactivar",
-        });
+          nuevoEstado = 'activo'; // Si estaba inactivo, se activa
       }
-    } else {
-      res.status(404).json({
-        status: 404,
-        message: "No se encontró el cultivo",
+
+      // Actualiza el estado del cultivo
+      await pool.query("UPDATE cultivo SET estado = ? WHERE id_cultivo = ?", [nuevoEstado, id_cultivo]);
+
+      // Actualiza el estado de la programación relacionada
+      await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_cultivo = ?", [nuevoEstado, id_cultivo]);
+
+  
+      // Confirma la transacción
+      await pool.query("COMMIT");
+
+      res.status(200).json({
+          status: 200,
+          message: `Estado del cultivo y tablas relacionadas actualizados a ${nuevoEstado}`,
       });
-    }
   } catch (error) {
-    res
-      .status(500)
-      .json({ status: 500, message: "Error en el sistema: " + error });
+      // Si ocurre un error, deshace la transacción
+      await pool.query("ROLLBACK");
+      res.status(500).json({
+          status: 500,
+          message: error.message || 'Error en el sistema',
+      });
   }
-};
+}
 
 /* 
 export const desactivar = async (req, res) => {

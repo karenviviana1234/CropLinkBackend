@@ -180,58 +180,67 @@ export const eliminarlote = async (req, res) => {
 
 
 export const desactivarlote = async (req, res) => {
-  try {
-      const { id_lote } = req.params;
+    try {
+        const { id_lote } = req.params;
 
-      // Consultar el estado actual del lote
-      const [lote] = await pool.query(
-          "SELECT estado, fk_id_finca FROM lotes WHERE id_lote = ?",
-          [id_lote]
-      );
+        // Inicia una transacción
+        await pool.query("START TRANSACTION");
 
-      if (lote.length === 0) {
-          return res.status(404).json({
-              status: 404,
-              message: "El lote con el ID " + id_lote + " no existe.",
-          });
-      }
+        // Consulta el estado actual del lote por su ID
+        const [lote] = await pool.query("SELECT * FROM lotes WHERE id_lote = ?", [id_lote]);
 
-      // Consultar el estado de la finca relacionada
-      const [finca] = await pool.query(
-          "SELECT estado FROM finca WHERE id_finca = ?",
-          [lote[0].fk_id_finca]
-      );
+        // Verifica si se encontró el lote
+        if (lote.length === 0) {
+            await pool.query("ROLLBACK"); // Si no se encontró, deshace la transacción
+            return res.status(404).json({
+                status: 404,
+                message: 'Lote no encontrado',
+            });
+        }
 
-      // Verificar si la finca está activa
-      if (finca.length === 0 || finca[0].estado !== 'activo') {
-          return res.status(403).json({
-              status: 403,
-              message: "No se puede cambiar el estado del lote porque la finca correspondiente no está activa.",
-          });
-      }
+        // Consulta el estado actual de la finca relacionada al lote
+        const [finca] = await pool.query("SELECT estado FROM finca WHERE id_finca = ?", [lote[0].fk_id_finca]);
 
-      // Cambiar el estado del lote
-      const nuevoEstado = lote[0].estado === 'activo' ? 'inactivo' : 'activo';
-      const [result] = await pool.query(
-          "UPDATE lotes SET estado = ? WHERE id_lote = ?",
-          [nuevoEstado, id_lote]
-      );
+        // Verifica si la finca está activa
+        if (finca.length === 0 || finca[0].estado !== 'activo') {
+            await pool.query("ROLLBACK"); // Si la finca no está activa, deshace la transacción
+            return res.status(400).json({
+                status: 400,
+                message: 'No se puede activar el lote porque la finca está inactiva',
+            });
+        }
 
-      if (result.affectedRows > 0) {
-          res.status(200).json({
-              status: 200,
-              message: "El estado del lote ha sido cambiado a " + nuevoEstado + ".",
-          });
-      } else {
-          res.status(500).json({
-              status: 500,
-              message: "No se pudo cambiar el estado del lote",
-          });
-      }
-  } catch (error) {
-      res.status(500).json({
-          status: 500,
-          message: "Error en el sistema: " + error,
-      });
-  }
-};
+        // Determina el nuevo estado
+        let nuevoEstado;
+        if (lote[0].estado === 'activo') {
+            nuevoEstado = 'inactivo'; // Si estaba activo, se desactiva
+        } else {
+            nuevoEstado = 'activo'; // Si estaba inactivo, se activa
+        }
+
+        // Actualiza el estado del lote
+        await pool.query("UPDATE lotes SET estado = ? WHERE id_lote = ?", [nuevoEstado, id_lote]);
+
+        // Actualiza el estado de los cultivos relacionados
+        await pool.query("UPDATE cultivo SET estado = ? WHERE fk_id_lote = ?", [nuevoEstado, id_lote]);
+
+        // Actualiza el estado de la programación relacionada
+        await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_cultivo IN (SELECT id_cultivo FROM cultivo WHERE fk_id_lote = ?)", [nuevoEstado, id_lote]);
+
+        // Confirma la transacción
+        await pool.query("COMMIT");
+
+        res.status(200).json({
+            status: 200,
+            message: `Estado del lote y tablas relacionadas actualizados a ${nuevoEstado}`,
+        });
+    } catch (error) {
+        // Si ocurre un error, deshace la transacción
+        await pool.query("ROLLBACK");
+        res.status(500).json({
+            status: 500,
+            message: error.message || 'Error en el sistema',
+        });
+    }
+}
+

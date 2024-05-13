@@ -147,8 +147,8 @@ export const desactivarF = async (req, res) => {
         // Inicia una transacción
         await pool.query("START TRANSACTION");
 
-        // Consulta la finca por su ID y bloquea la fila para evitar lecturas simultáneas
-        const [finca] = await pool.query("SELECT * FROM finca WHERE id_finca = ? FOR UPDATE", [id]);
+        // Consulta la finca por su ID
+        const [finca] = await pool.query("SELECT * FROM finca WHERE id_finca = ?", [id]);
 
         // Verifica si se encontró la finca
         if (finca.length === 0) {
@@ -173,16 +173,19 @@ export const desactivarF = async (req, res) => {
         // Actualiza el estado de los lotes relacionados
         await pool.query("UPDATE lotes SET estado = ? WHERE fk_id_finca = ?", [nuevoEstado, id]);
 
-          // Actualiza el estado de los lotes relacionados
-          await pool.query("UPDATE cultivo SET estado = ? WHERE fk_id_lote = ?", [nuevoEstado, id]);
+        // Actualiza el estado de los cultivos relacionados
+        await pool.query("UPDATE cultivo SET estado = ? WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?)", [nuevoEstado, id]);
 
+        // Actualiza el estado de la programación relacionada
+        await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_cultivo IN (SELECT id_cultivo FROM cultivo WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?))", [nuevoEstado, id]);
 
+    
         // Confirma la transacción
         await pool.query("COMMIT");
 
         res.status(200).json({
             status: 200,
-            message: `Estado de la finca y lotes actualizados a ${nuevoEstado}`,
+            message: `Estado de la finca y tablas relacionadas actualizados a ${nuevoEstado}`,
         });
     } catch (error) {
         // Si ocurre un error, deshace la transacción

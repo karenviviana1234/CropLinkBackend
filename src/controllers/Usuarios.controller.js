@@ -209,10 +209,19 @@ export const desactivarUsuario = async (req, res) => {
         // Actualizar el estado del usuario en la base de datos
         const [result] = await pool.query("UPDATE usuarios SET estado=? WHERE identificacion=?", [nuevoEstado, identificacion]);
 
+        // Actualizar el estado de la tabla de programación según el nuevo estado del usuario
+        if (nuevoEstado === 'inactivo') {
+            // Desactivar la tabla de programación si el usuario se desactiva
+            await pool.query("UPDATE programacion SET estado='inactivo' WHERE fk_identificacion=?", [identificacion]);
+        } else {
+            // Activar la tabla de programación si el usuario se activa
+            await pool.query("UPDATE programacion SET estado='activo' WHERE fk_identificacion=?", [identificacion]);
+        }
+
         if (result.affectedRows > 0) {
             return res.status(200).json({
                 'status': 200,
-                'message': `Se actualizó con éxito el estado del usuario ${identificacion} a ${nuevoEstado}`
+                'message': `Se actualizó con éxito el estado a ${nuevoEstado}`
             });
         } else {
             return res.status(404).json({

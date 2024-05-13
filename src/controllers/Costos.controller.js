@@ -143,6 +143,7 @@ export const actualizar = async (req, res) => {
         res.status(500).json({ status: 500, message: 'Error en el sistema: ' + error });
     }
 };
+
 export const desactivarcosto = async (req, res) => {
   try {
     const { id_costos } = req.params;
@@ -156,19 +157,19 @@ export const desactivarcosto = async (req, res) => {
     if (currentResult.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "El lote con el id " + id_costos + " no fue encontrado",
+        message: "El costo con el id " + id_costos + " no fue encontrado",
       });
     }
 
     const currentState = currentResult[0].estado;
 
     // Cambiar el estado del registro
-    const newState = currentState === 'activo' ? 'inactivo' : 'activo';
+    const nuevoEstado = currentState === 'activo' ? 'inactivo' : 'activo';
     
     // Actualizar el estado en la base de datos
     const [result] = await pool.query(
       "UPDATE costos SET estado=? WHERE id_costos=?",
-      [newState, id_costos]
+      [nuevoEstado, id_costos]
     );
 
     if (result.affectedRows > 0) {
