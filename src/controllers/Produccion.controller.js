@@ -194,38 +194,84 @@ export const actualizarProduccion = async (req, res) => {
 };
 
 
-export const eliminarProduccion = async (req, res) => {
+export const desactivarProduccion = async (req, res) => {
     try {
-        // Obtiene el ID de la producción desde el header
-        const id_produccion = req.headers['id_produccion'];
+        const { id_producccion } = req.params;
 
-        // Verifica si se proporcionó el ID
-        if (!id_produccion) {
-            return res.status(400).json({
-                status: 400,
-                message: 'Se requiere proporcionar el ID de la producción en el header'
+        const [currentUser] = await pool.query("SELECT estado FROM produccion WHERE id_producccion=?", [id_producccion]);
+        if (currentUser.length === 0) {
+            return res.status(404).json({
+                'status': 404,
+                'message': 'No se encontró la proggramacion  con el id proporcionado'
             });
         }
+        const estadoActual = currentUser[0].estado;
+        let nuevoEstado = '';
+        if (estadoActual === 'activo') {
+            nuevoEstado = 'inactivo';
+        } else {
+            nuevoEstado = 'activo';
+        }
 
-        // Realiza la consulta para eliminar la producción con el ID proporcionado
-        const [result] = await pool.query('DELETE FROM produccion WHERE id_produccion = ?', [id_produccion]);
+        const [result] = await pool.query("UPDATE produccion SET estado=? WHERE id_producccion=?", [nuevoEstado, id_producccion]);
 
-        // Verifica si se eliminó correctamente
+        if (nuevoEstado === 'inactivo') {
+            await pool.query("UPDATE programacion SET estado='inactivo' WHERE fk_id_producccion=?", [id_producccion]);
+        } else {
+            await pool.query("UPDATE programacion SET estado='activo' WHERE fk_id_producccion=?", [id_producccion]);
+        }
+
         if (result.affectedRows > 0) {
-            res.status(200).json({
-                status: 200,
-                message: 'Se eliminó la producción con éxito'
+            return res.status(200).json({
+                'status': 200,
+                'message': `Se actualizó con éxito el estado a ${nuevoEstado}`
             });
         } else {
-            res.status(404).json({
-                status: 404,
-                message: 'No se encontró ninguna producción con el ID proporcionado'
+            return res.status(404).json({
+                'status': 404,
+                'message': 'No se pudo actualizar el estado del usuario'
             });
         }
     } catch (error) {
         res.status(500).json({
-            status: 500,
-            message: 'Error en el servidor'
+            'status': 500,
+            'message': 'Error en el sistema: ' + error
         });
     }
 };
+
+// export const eliminarProduccion = async (req, res) => {
+//     try {
+//         // Obtiene el ID de la producción desde el header
+//         const id_produccion = req.headers['id_produccion'];
+
+//         // Verifica si se proporcionó el ID
+//         if (!id_produccion) {
+//             return res.status(400).json({
+//                 status: 400,
+//                 message: 'Se requiere proporcionar el ID de la producción en el header'
+//             });
+//         }
+
+//         // Realiza la consulta para eliminar la producción con el ID proporcionado
+//         const [result] = await pool.query('DELETE FROM produccion WHERE id_produccion = ?', [id_produccion]);
+
+//         // Verifica si se eliminó correctamente
+//         if (result.affectedRows > 0) {
+//             res.status(200).json({
+//                 status: 200,
+//                 message: 'Se eliminó la producción con éxito'
+//             });
+//         } else {
+//             res.status(404).json({
+//                 status: 404,
+//                 message: 'No se encontró ninguna producción con el ID proporcionado'
+//             });
+//         }
+//     } catch (error) {
+//         res.status(500).json({
+//             status: 500,
+//             message: 'Error en el servidor'
+//         });
+//     }
+// };
