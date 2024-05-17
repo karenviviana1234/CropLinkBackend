@@ -11,7 +11,7 @@ const rutaDeActividad = Router()
 rutaDeActividad.get("/listara",validarToken, listarA);
 rutaDeActividad.post("/Registrara",validarToken,  validarRR,  RegistrarA);
 rutaDeActividad.put("/Actualizara/actividad/:id",validarToken, validarRA, ActualizarA);
-rutaDeActividad.put("/Desactivara/actividad/:id_actividad", validarToken , DesactivarA);
+rutaDeActividad.put("/Desactivara/actividad/:id", validarToken , DesactivarA);
 rutaDeActividad.get("/Buscar/actividad/:id",validarToken, BuscarA);
 /* rutaDeActividad.put("/EmpleadoMood/actividad/:id", validarToken , Empleado); */
 

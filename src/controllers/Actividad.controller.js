@@ -37,7 +37,7 @@ export const listarA = async (req, res) => {
   }
 };
 
-export const RegistrarA = async (req, res) => {
+/* export const RegistrarA = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -107,6 +107,95 @@ export const RegistrarA = async (req, res) => {
       message: error.message || "Error en el sistema",
     });
   }
+}; */
+
+export const RegistrarA = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json(errors);
+    }
+    
+    const {
+      nombre_actividad,
+      tiempo,
+      observaciones,
+      fk_id_variedad,
+      valor_actividad,
+      estado,
+      fk_id_tipo_recursos // Añadido fk_id_tipo_recursos al destructuring
+    } = req.body;
+
+    // Verificar si el campo estado está presente en el cuerpo de la solicitud
+    if (!estado) {
+      return res.status(400).json({
+        status: 400,
+        message: "El campo 'estado' es obligatorio"
+      });
+    }
+
+    // Obtener el ID del administrador que realiza la solicitud desde el token
+    const admin_id = req.usuario;
+
+    // Verificar si la variedad existe
+    const [variedadExist] = await pool.query(
+      "SELECT * FROM variedad WHERE id_variedad = ?",
+      [fk_id_variedad]
+    );
+
+    if (variedadExist.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: "La variedad no existe. Registre primero una variedad.",
+      });
+    }
+
+    // Verificar si el tipo de recurso existe
+    const [tipoRecursoExist] = await pool.query(
+      "SELECT * FROM tipo_recursos WHERE id_tipo_recursos = ?",
+      [fk_id_tipo_recursos]
+    );
+
+    if (tipoRecursoExist.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: "El tipo de recurso no existe.",
+      });
+    }
+
+    // Inserción de la nueva actividad con la clave foránea fk_id_tipo_recursos
+    const [result] = await pool.query(
+      "INSERT INTO actividad (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado, admin_id, fk_id_tipo_recursos) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        nombre_actividad,
+        tiempo,
+        observaciones,
+        fk_id_variedad,
+        valor_actividad,
+        estado,
+        admin_id,
+        fk_id_tipo_recursos // Añadido fk_id_tipo_recursos al array de valores para la inserción
+      ]
+    );
+
+    if (result.affectedRows > 0) {
+      return res.status(200).json({
+        status: 200,
+        message: "Se registró la actividad con éxito",
+        result: result, // Mostrar el objeto result completo
+      });
+    } else {
+      return res.status(403).json({
+        status: 403,
+        message: "No se registró la actividad",
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message || "Error en el sistema",
+    });
+  }
 };
 
 
@@ -124,8 +213,8 @@ export const ActualizarA = async (req, res) => {
       observaciones,
       fk_id_variedad,
       valor_actividad,
-      observacion,
       estado,
+      fk_id_tipo_recursos, // Agregar fk_id_tipo_recursos al destructuring
     } = req.body;
 
     // Verifica si al menos uno de los campos está presente en la solicitud
@@ -135,12 +224,12 @@ export const ActualizarA = async (req, res) => {
       !observaciones &&
       !fk_id_variedad &&
       !valor_actividad &&
-      !observacion &&
-      !estado
+      !estado &&
+      !fk_id_tipo_recursos // Agregar fk_id_tipo_recursos a la condición
     ) {
       return res.status(400).json({
         message:
-          "Al menos uno de los campos (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, observacion, estado) debe estar presente en la solicitud para realizar la actualización.",
+          "Al menos uno de los campos (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado, fk_id_tipo_recursos) debe estar presente en la solicitud para realizar la actualización.",
       });
     }
 
@@ -166,13 +255,14 @@ export const ActualizarA = async (req, res) => {
       SET 
       nombre_actividad = ${nombre_actividad ? `'${nombre_actividad}'` : "nombre_actividad"},
       tiempo = ${tiempo !== undefined ? `'${tiempo}'` : "tiempo"},
-      observacion = ${observacion ? `'${observacion}'` : "observacion"},
       observaciones = ${observaciones ? `'${observaciones}'` : "observaciones"},
       fk_id_variedad = ${fk_id_variedad ? `'${fk_id_variedad}'` : "fk_id_variedad"},
       valor_actividad = ${valor_actividad ? `'${valor_actividad}'` : "valor_actividad"},
-      estado = ${estado ? `'${estado}'` : "estado"}
+      estado = ${estado ? `'${estado}'` : "estado"},
+      fk_id_tipo_recursos = ${fk_id_tipo_recursos ? `'${fk_id_tipo_recursos}'` : "fk_id_tipo_recursos"}
       WHERE id_actividad = ${id}`
     );
+    
 
     if (result.affectedRows > 0) {
       res.status(200).json({
@@ -182,7 +272,7 @@ export const ActualizarA = async (req, res) => {
     } else {
       res.status(403).json({
         status: 403,
-        message: "No se pudo actualizar la Actividad ",
+        message: "No se pudo actualizar la actividad",
       });
     }
   } catch (error) {
@@ -196,6 +286,7 @@ export const ActualizarA = async (req, res) => {
 
 
 
+
 // crud desactivar/* 
 
 export const DesactivarA = async (req, res) => {
@@ -205,26 +296,27 @@ export const DesactivarA = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { id_actividad } = req.params;
+    const { id } = req.params; // Cambiado de id_actividad a id
+    const admin_id = req.usuario; // Obtener el admin_id del usuario autenticado
 
     // Consultar el estado actual de la actividad
     const [oldActividad] = await pool.query(
-      "SELECT estado FROM actividad WHERE id_actividad = ?",
-      [id_actividad]
+      "SELECT estado FROM actividad WHERE id_actividad = ? AND admin_id = ?",
+      [id, admin_id] // Agregar verificación de admin_id
     );
 
     // Verificar si se encontró la actividad
     if (oldActividad.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "La actividad con el ID proporcionado no fue encontrada",
+        message: "La actividad con el ID proporcionado no fue encontrada o no está autorizada para este administrador",
       });
     }
 
     // Consultar el estado de la variedad asociada a la actividad
     const [variedad] = await pool.query(
       "SELECT estado FROM variedad WHERE id_variedad = (SELECT fk_id_variedad FROM actividad WHERE id_actividad = ?)",
-      [id_actividad]
+      [id]
     );
 
     // Verificar si la variedad está activa
@@ -245,14 +337,14 @@ export const DesactivarA = async (req, res) => {
       // Actualizar el estado de la actividad
       await pool.query(
         `UPDATE actividad SET estado = ? WHERE id_actividad = ?`,
-        [nuevoEstadoActividad, id_actividad]
+        [nuevoEstadoActividad, id]
       );
 
       // Si se está desactivando la actividad, desactivar también la programación asociada
       if (nuevoEstadoActividad === "inactivo") {
         await pool.query(
           `UPDATE programacion SET estado = ? WHERE fk_id_actividad = ?`,
-          ["inactivo", id_actividad]
+          ["inactivo", id]
         );
       }
 
@@ -274,6 +366,8 @@ export const DesactivarA = async (req, res) => {
     });
   }
 };
+
+
  
 
 // CRUD - Buscar
