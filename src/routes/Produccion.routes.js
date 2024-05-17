@@ -10,7 +10,7 @@ const rutaProduccion = Router()
 rutaProduccion.get('/listarProduccion',validarToken,listarProduccion);
 rutaProduccion.post('/RegistraProduccion',validarToken, ValidateProduccion,registrarProduccion);
 rutaProduccion.get('/BuscarProduccion/:id_producccion', validarToken, BuscarProduccion);
-rutaProduccion.get('/desactivarProduccion/:id_producccion', validarToken, desactivarProduccion);
+rutaProduccion.put('/desactivarProduccion/:id_produccion', validarToken, desactivarProduccion);
 rutaProduccion.put('/ActualizarProduccion/:id_producccion',validarToken,actualizar,actualizarProduccion);
 
 export default rutaProduccion;
