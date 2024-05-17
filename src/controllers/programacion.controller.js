@@ -1,7 +1,6 @@
 import { pool } from "../database/conexion.js";
 import { validationResult } from "express-validator";
 
-
 export const registrarProgramacion = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -14,7 +13,8 @@ export const registrarProgramacion = async (req, res) => {
       fecha_fin,
       fk_identificacion,
       fk_id_actividad,
-      fk_id_cultivo,
+      //fk_id_cultivo,
+      fk_id_variedad, // Agregado fk_id_variedad
       estado
     } = req.body;
 
@@ -50,7 +50,7 @@ export const registrarProgramacion = async (req, res) => {
       });
     }
 
-    // Verificar si el cultivo existe
+  /*   // Verificar si el cultivo existe
     const [cultivoExist] = await pool.query(
       "SELECT * FROM cultivo WHERE id_cultivo = ?",
       [fk_id_cultivo]
@@ -61,11 +61,23 @@ export const registrarProgramacion = async (req, res) => {
         message: "El cultivo no existe. Registre primero un cultivo."
       });
     }
+ */
+    // Verificar si la variedad existe
+    const [variedadExist] = await pool.query(
+      "SELECT * FROM variedad WHERE id_variedad = ?", // Verificar la tabla de variedades
+      [fk_id_variedad]
+    );
+    if (variedadExist.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: "La variedad no existe. Registre primero una variedad."
+      });
+    }
 
     // Insertar la programación
     const [result] = await pool.query(
-      "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo, admin_id) VALUES (?,?,?,?,?,?,?)",
-      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_cultivo, adminId]
+      "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_variedad, admin_id) VALUES (?,?,?,?,?,?,?)",
+      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad,  fk_id_variedad, adminId]
     );
 
     if (result.affectedRows > 0) {
@@ -86,6 +98,7 @@ export const registrarProgramacion = async (req, res) => {
     });
   }
 };
+
 
 
 

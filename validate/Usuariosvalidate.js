@@ -18,11 +18,11 @@ export const validarUsuario = [
         .isLength({ max: 50 })
         .matches(/^[A-Za-z\s]+$/),
 
-    check('rol', 'Rol no existe')
-        .not()
-        .isEmpty()
-        .isIn(["administrador", "empleado"]),
-       
+        check('rol', 'Rol no existe')
+        .optional()
+        .not().isEmpty()
+        .isIn(["administrador", "empleado"])
+   
 ];
 
     
