@@ -12,7 +12,8 @@ export const listarProduccion = async (req, res) => {
                 produ.cantidad_produccion, 
                 produ.fk_id_programacion AS id_programacion,  
                 pro.fecha_inicio, 
-                pro.fecha_fin
+                pro.fecha_fin,
+                produ.estado
             FROM 
                 produccion AS produ
             JOIN 
@@ -42,21 +43,22 @@ export const listarProduccion = async (req, res) => {
 
 export const registrarProduccion = async (req, res) => {
     try {
+        // Validación de los resultados
         const errors = validationResult(req);
-
         if (!errors.isEmpty()) {
-            return res.status(400).json({
-                errors: errors.array()
-            });
+            return res.status(400).json({ errors: errors.array() });
         }
 
         const { cantidad_produccion, precio, fk_id_programacion } = req.body;
 
-        // Obtener el admin_id del usuario autenticado
+        // Obtener el adminId del usuario autenticado
         const adminId = req.usuario;
 
         // Verificar si la programación existe y pertenece al administrador actual
-        const [programacionExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ? AND admin_id = ?', [fk_id_programacion, adminId]);
+        const [programacionExist] = await pool.query(
+            'SELECT * FROM programacion WHERE id_programacion = ? AND admin_id = ?',
+            [fk_id_programacion, adminId]
+        );
 
         if (programacionExist.length === 0) {
             return res.status(404).json({
@@ -65,32 +67,33 @@ export const registrarProduccion = async (req, res) => {
             });
         }
 
-        if (!cantidad_produccion || !precio || !fk_id_programacion) {
-            return res.status(400).json({
-                message: 'Se requieren todos los campos para registrar la producción.'
-            });
-        }
+        // Establecer estado como 'activo' por defecto
+        const estado = 'activo';
 
-        const [Registrar] = await pool.query('INSERT INTO produccion (cantidad_produccion, precio, fk_id_programacion,admin_id) VALUES (?, ?, ?, ?)',
-            [cantidad_produccion, precio, fk_id_programacion, admin_id]);
+        // Realizar la inserción en la tabla produccion
+        const [Registrar] = await pool.query(
+            'INSERT INTO produccion (cantidad_produccion, precio, fk_id_programacion, estado, admin_id) VALUES (?, ?, ?, ?, ?)',
+            [cantidad_produccion, precio, fk_id_programacion,estado, adminId ]
+        );
 
         if (Registrar.affectedRows > 0) {
-            res.status(200).json({
+            return res.status(200).json({
                 status: 200,
-                message: 'Se registró correctamente la producción.'
+                message: 'Se registró correctamente la producción.',
+                result: Registrar
             });
         } else {
-            res.status(400).json({
+            return res.status(400).json({
                 status: 400,
                 message: 'No se ha podido registrar la producción.'
             });
         }
     } catch (error) {
-        res.status(500).json({
+        console.error(error); // Mejor uso de logging
+        return res.status(500).json({
             status: 500,
             message: 'Error en el servidor'
         });
-        console.log(error);
     }
 };
 
@@ -193,7 +196,50 @@ export const actualizarProduccion = async (req, res) => {
     }
 };
 
+export const DesactivarProduccion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const adminId = req.usuario;
 
+        // Verificar si la producción existe y obtener su estado actual
+        const [oldProduccion] = await pool.query("SELECT * FROM produccion WHERE id_producccion = ?", [id]); 
+        
+        if (oldProduccion.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No se encontró la producción con el ID especificado'
+            });
+        }
+
+        // Verificar el estado actual para cambiarlo entre 'activo' e 'inactivo'
+        const newEstado = oldProduccion[0].estado === 'activo' ? 'inactivo' : 'activo';
+
+        const [result] = await pool.query(
+            "UPDATE produccion SET estado = ?, admin_id = ? WHERE id_producccion = ?",
+            [newEstado, adminId, id]
+        );
+
+        if (result.affectedRows > 0) {
+            return res.status(200).json({
+                status: 200,
+                message: `Se cambió el estado de la producción a '${newEstado}' con éxito`,
+
+            });
+        } else {
+            return res.status(404).json({
+                status: 404,
+                message: 'No se encontró el registro para cambiar el estado'
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({
+            status: 500,
+            message: error.message || 'Error en el servidor'
+        });
+    }
+};
+
+/* 
 export const eliminarProduccion = async (req, res) => {
     try {
         // Obtiene el ID de la producción desde el header
@@ -228,4 +274,4 @@ export const eliminarProduccion = async (req, res) => {
             message: 'Error en el servidor'
         });
     }
-};
+}; */

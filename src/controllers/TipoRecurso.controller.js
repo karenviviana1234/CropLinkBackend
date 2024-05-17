@@ -119,35 +119,44 @@ export const ActualizarTipoRecurso = async (req, res) => {
 export const DesactivarR = async (req, res) => {
     try {
         const { id } = req.params;
+        const adminId = req.usuario;
 
+        // Verificar si el recurso existe y obtener su estado actual
         const [oldRecurso] = await pool.query("SELECT * FROM tipo_recursos WHERE id_tipo_recursos = ?", [id]); 
         
-        // Verifica si el estado actual es "activo" para cambiarlo a "gastado/a" y viceversa
+        if (oldRecurso.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'No se encontró el recurso con el ID especificado'
+            });
+        }
+
+        // Verifica si el estado actual es "existente" para cambiarlo a "gastada_o" y viceversa
         const newEstado = oldRecurso[0].estado === 'existente' ? 'gastada_o' : 'existente';
 
         const [result] = await pool.query(
-            `UPDATE tipo_recursos SET estado = ? WHERE id_tipo_recursos = ?`,[newEstado, id]
+            "UPDATE tipo_recursos SET estado = ?, admin_id = ? WHERE id_tipo_recursos = ?",
+            [newEstado, adminId, id]
         );
 
         if (result.affectedRows > 0) {
-            res.status(200).json({
+            return res.status(200).json({
                 status: 200,
-                message: `Se cambió el estado del recurso a '${newEstado}' con éxito`,
-                
+                message: `Se cambió el estado del recurso a '${newEstado}' con éxito`
             });
         } else {
-            res.status(404).json({
+            return res.status(404).json({
                 status: 404,
                 message: 'No se encontró el registro para cambiar el estado'
             });
         }
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             status: 500,
             message: error.message || 'Error en el servidor'
         });
     }
-}
+};
 
     
 
