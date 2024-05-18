@@ -1,13 +1,14 @@
 import { pool } from "../database/conexion.js";
 import { validationResult } from "express-validator";
-
+//gokuuuuu
 //listar raa
 export const listarA = async (req, res) => {
   try {
     // Obtener el ID del administrador que realiza la solicitud desde el token
     const admin_id = req.usuario;
 
-    let sql = `
+    // Consulta SQL para listar actividades del administrador actual junto con los nombres de recursos asociados
+    const sql = `
       SELECT ac.id_actividad, 
              ac.nombre_actividad, 
              ac.tiempo, 
@@ -15,29 +16,38 @@ export const listarA = async (req, res) => {
              ac.valor_actividad,  
              v.nombre_variedad,
              ac.observacion,
-             ac.estado
+             ac.estado,
+             tr.nombre_recursos
       FROM Actividad AS ac 
       JOIN variedad AS v ON ac.fk_id_variedad = v.id_variedad
-      WHERE ac.admin_id = ?`; // Agregar la condición para filtrar por admin_id
+      JOIN tipo_recursos AS tr ON ac.fk_id_tipo_recursos = tr.id_tipo_recursos
+      WHERE ac.admin_id = ?`; 
 
-    const [result] = await pool.query(sql, [admin_id]); // Pasar admin_id como parámetro
+    // Ejecutar la consulta SQL con el ID del administrador como parámetro
+    const [result] = await pool.query(sql, [admin_id]);
 
+    // Verificar si se encontraron actividades
     if (result.length > 0) {
+      // Devolver las actividades encontradas en formato JSON
       res.status(200).json(result);
     } else {
+      // Enviar un mensaje si no se encontraron actividades
       res.status(400).json({
-        Mensaje: "No hay actividades que listar",
+        mensaje: "No hay actividades que listar",
       });
     }
   } catch (error) {
+    // Capturar errores y enviar un mensaje de error genérico
     console.error(error);
     res.status(500).json({
-      Mensaje: "Error en el sistema",
+      mensaje: "Error en el sistema",
     });
   }
 };
 
-/* export const RegistrarA = async (req, res) => {
+
+
+export const RegistrarA = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -50,7 +60,8 @@ export const listarA = async (req, res) => {
       observaciones,
       fk_id_variedad,
       valor_actividad,
-      estado // Agregar estado al destructuring
+      estado,
+      fk_id_tipo_recursos // Cambiado a una lista de IDs de tipo de recursos
     } = req.body;
 
     // Verificar si el campo estado está presente en el cuerpo de la solicitud
@@ -64,6 +75,7 @@ export const listarA = async (req, res) => {
     // Obtener el ID del administrador que realiza la solicitud desde el token
     const admin_id = req.usuario;
 
+    // Verificar si la variedad existe
     const [variedadExist] = await pool.query(
       "SELECT * FROM variedad WHERE id_variedad = ?",
       [fk_id_variedad]
@@ -76,40 +88,52 @@ export const listarA = async (req, res) => {
       });
     }
 
-    const [result] = await pool.query(
-      "INSERT INTO actividad (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado, admin_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [
-        nombre_actividad,
-        tiempo,
-        observaciones,
-        fk_id_variedad,
-        valor_actividad,
-        estado,
-        admin_id, // Agregar el admin_id al array de valores para la inserción
-      ]
-    );
+    // Verificar si los tipos de recurso existen
+    for (const tipoRecursoId of fk_id_tipo_recursos) {
+      const [tipoRecursoExist] = await pool.query(
+        "SELECT * FROM tipo_recursos WHERE id_tipo_recursos = ?",
+        [tipoRecursoId]
+      );
 
-    if (result.affectedRows > 0) {
-      return res.status(200).json({
-        status: 200,
-        message: "Se registró la actividad con éxito",
-        result: result, // Mostrar el objeto result completo
-      });
-    } else {
-      return res.status(403).json({
-        status: 403,
-        message: "No se registró la actividad",
-      });
+      if (tipoRecursoExist.length === 0) {
+        return res.status(404).json({
+          status: 404,
+          message: `El tipo de recurso con ID ${tipoRecursoId} no existe.`,
+        });
+      }
     }
+
+    // Inserción de la nueva actividad con las claves foráneas fk_id_tipo_recursos
+    for (const tipoRecursoId of fk_id_tipo_recursos) {
+      await pool.query(
+        "INSERT INTO actividad (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado, admin_id, fk_id_tipo_recursos) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          nombre_actividad,
+          tiempo,
+          observaciones,
+          fk_id_variedad,
+          valor_actividad,
+          estado,
+          admin_id,
+          tipoRecursoId // Añadido el tipoRecursoId actual al array de valores para la inserción
+        ]
+      );
+    }
+
+    return res.status(200).json({
+      status: 200,
+      message: "Se registraron las actividades con éxito",
+    });
   } catch (error) {
     return res.status(500).json({
       status: 500,
       message: error.message || "Error en el sistema",
     });
   }
-}; */
+};
 
-export const RegistrarA = async (req, res) => {
+
+/* export const RegistrarA = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -196,7 +220,7 @@ export const RegistrarA = async (req, res) => {
       message: error.message || "Error en el sistema",
     });
   }
-};
+}; */
 
 
 export const ActualizarA = async (req, res) => {

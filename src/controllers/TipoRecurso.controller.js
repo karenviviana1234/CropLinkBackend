@@ -1,6 +1,6 @@
 import { pool } from "../database/conexion.js";
 import { validationResult } from 'express-validator';
-
+//ya basta freezer
 //git crud
 //crud listar
 export const listarTipoRecurso = async (req, res) => {
