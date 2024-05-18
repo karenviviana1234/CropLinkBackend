@@ -197,82 +197,48 @@ export const actualizarProduccion = async (req, res) => {
     }
 };
 
-export const DesactivarProduccion = async (req, res) => {
+export const desactivarProduccion = async (req, res) => {
     try {
-        const { id } = req.params;
-        const adminId = req.usuario;
+        const { id_producccion } = req.params;
 
-        // Verificar si la producción existe y obtener su estado actual
-        const [oldProduccion] = await pool.query("SELECT * FROM produccion WHERE id_producccion = ?", [id]); 
-        
-        if (oldProduccion.length === 0) {
-            return res.status(404).json({
-                status: 404,
-                message: 'No se encontró la producción con el ID especificado'
-            });
-        }
+        await pool.query("START TRANSACTION");
 
-        // Verificar el estado actual para cambiarlo entre 'activo' e 'inactivo'
-        const newEstado = oldProduccion[0].estado === 'activo' ? 'inactivo' : 'activo';
-
-        const [result] = await pool.query(
-            "UPDATE produccion SET estado = ?, admin_id = ? WHERE id_producccion = ?",
-            [newEstado, adminId, id]
+        const [currentResult] = await pool.query(
+            "SELECT estado FROM produccion WHERE id_producccion = ?",
+            [id_producccion]
         );
 
-        if (result.affectedRows > 0) {
-            return res.status(200).json({
-                status: 200,
-                message: `Se cambió el estado de la producción a '${newEstado}' con éxito`,
-
-            });
-        } else {
+        if (currentResult.length === 0) {
+            await pool.query("ROLLBACK");
             return res.status(404).json({
                 status: 404,
-                message: 'No se encontró el registro para cambiar el estado'
+                message: "La produccion con el id " + id_producccion  + " no fue encontrada",
             });
         }
+
+        const currentState = currentResult[0].estado;
+
+        const nuevoEstado = currentState === 'activo' ? 'inactivo' : 'activo';
+
+        await pool.query(
+            "UPDATE produccion SET estado = ? WHERE id_producccion = ?",
+            [nuevoEstado, id_producccion]
+        );
+
+
+        // Confirmar la transacción
+        await pool.query("COMMIT");
+
+        res.status(200).json({
+            status: 200,
+            message: "El estado de la produccion ha sido cambiado a " + nuevoEstado + ".",
+            });
     } catch (error) {
-        return res.status(500).json({
+        // Si ocurre un error, deshace la transacción
+        await pool.query("ROLLBACK");
+        res.status(500).json({
             status: 500,
-            message: error.message || 'Error en el servidor'
+            message: "Error en el sistema: " + error,
         });
     }
 };
-
-/* 
-export const eliminarProduccion = async (req, res) => {
-    try {
-        // Obtiene el ID de la producción desde el header
-        const id_produccion = req.headers['id_produccion'];
-
-        // Verifica si se proporcionó el ID
-        if (!id_produccion) {
-            return res.status(400).json({
-                status: 400,
-                message: 'Se requiere proporcionar el ID de la producción en el header'
-            });
-        }
-
-        // Realiza la consulta para eliminar la producción con el ID proporcionado
-        const [result] = await pool.query('DELETE FROM produccion WHERE id_produccion = ?', [id_produccion]);
-
-        // Verifica si se eliminó correctamente
-        if (result.affectedRows > 0) {
-            res.status(200).json({
-                status: 200,
-                message: 'Se eliminó la producción con éxito'
-            });
-        } else {
-            res.status(404).json({
-                status: 404,
-                message: 'No se encontró ninguna producción con el ID proporcionado'
-            });
-        }
-    } catch (error) {
-        res.status(500).json({
-            status: 500,
-            message: 'Error en el servidor'
-        });
-    }
-}; */
