@@ -9,9 +9,8 @@ export const listarProduccion = async (req, res) => {
         let sql = `
             SELECT 
                 produ.id_producccion,
-                produ.precio, 
                 produ.cantidad_produccion, 
-                produ.estado, 
+                produ.precio, 
                 produ.fk_id_programacion AS id_programacion,  
                 pro.fecha_inicio, 
                 pro.fecha_fin,
@@ -51,7 +50,7 @@ export const registrarProduccion = async (req, res) => {
             return res.status(400).json({ errors: errors.array() });
         }
 
-//         const { cantidad_produccion, precio, fk_id_programacion } = req.body;
+        const { cantidad_produccion, precio, fk_id_programacion } = req.body;
 
         // Obtener el adminId del usuario autenticado
         const adminId = req.usuario;
@@ -62,14 +61,12 @@ export const registrarProduccion = async (req, res) => {
             [fk_id_programacion, adminId]
         );
 
-//         const estado = 'activo';
-
-//         if (programacionExist.length === 0) {
-//             return res.status(404).json({
-//                 status: 404,
-//                 message: 'Esta programación no existe o no está autorizada para este administrador. Registre primero la programación.'
-//             });
-//         }
+        if (programacionExist.length === 0) {
+            return res.status(404).json({
+                status: 404,
+                message: 'Esta programación no existe o no está autorizada para este administrador. Registre primero la programación.'
+            });
+        }
 
         // Establecer estado como 'activo' por defecto
         const estado = 'activo';
@@ -249,16 +246,16 @@ export const eliminarProduccion = async (req, res) => {
         // Obtiene el ID de la producción desde el header
         const id_produccion = req.headers['id_produccion'];
 
-//         // Verifica si se proporcionó el ID
-//         if (!id_produccion) {
-//             return res.status(400).json({
-//                 status: 400,
-//                 message: 'Se requiere proporcionar el ID de la producción en el header'
-//             });
-//         }
+        // Verifica si se proporcionó el ID
+        if (!id_produccion) {
+            return res.status(400).json({
+                status: 400,
+                message: 'Se requiere proporcionar el ID de la producción en el header'
+            });
+        }
 
-//         // Realiza la consulta para eliminar la producción con el ID proporcionado
-//         const [result] = await pool.query('DELETE FROM produccion WHERE id_produccion = ?', [id_produccion]);
+        // Realiza la consulta para eliminar la producción con el ID proporcionado
+        const [result] = await pool.query('DELETE FROM produccion WHERE id_produccion = ?', [id_produccion]);
 
         // Verifica si se eliminó correctamente
         if (result.affectedRows > 0) {
