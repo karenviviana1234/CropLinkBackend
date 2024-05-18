@@ -1,6 +1,6 @@
 import { pool } from "../database/conexion.js";
 import { validationResult } from "express-validator";
-
+//olaaaaa
 export const listarProduccion = async (req, res) => {
     try {
         // Obtener el admin_id del usuario autenticado
