@@ -2,127 +2,97 @@ import { pool } from "../database/conexion.js";
 import { validationResult } from "express-validator";
 //gokuuuuu
 //listar raa
+// Controlador para listar actividades
 export const listarA = async (req, res) => {
   try {
-    // Obtener el ID del administrador que realiza la solicitud desde el token
     const admin_id = req.usuario;
 
-    // Consulta SQL para listar actividades del administrador actual junto con los nombres de recursos asociados
     const sql = `
-      SELECT ac.id_actividad, 
-             ac.nombre_actividad, 
-             ac.tiempo, 
-             ac.observaciones,
-             ac.valor_actividad,  
-             v.nombre_variedad,
-             ac.observacion,
-             ac.estado,
-             tr.nombre_recursos
-      FROM Actividad AS ac 
-      JOIN variedad AS v ON ac.fk_id_variedad = v.id_variedad
-      JOIN tipo_recursos AS tr ON ac.fk_id_tipo_recursos = tr.id_tipo_recursos
-      WHERE ac.admin_id = ?`; 
+     SELECT 
+  ac.id_actividad, 
+  ac.nombre_actividad, 
+  ac.tiempo, 
+  ac.observaciones,
+  ac.valor_actividad,  
+  v.nombre_variedad,
+  GROUP_CONCAT(tr.nombre_recursos) AS tipos_recursos,
+  ac.estado
+FROM 
+  actividad AS ac 
+JOIN 
+  variedad AS v ON ac.fk_id_variedad = v.id_variedad
+JOIN 
+  actividad_tipo_recursos AS atr ON ac.id_actividad = atr.fk_id_actividad
+JOIN 
+  tipo_recursos AS tr ON atr.fk_id_tipo_recursos = tr.id_tipo_recursos
+WHERE 
+  ac.admin_id = ?   -- Agregar esta condición
+GROUP BY 
+  ac.id_actividad;
 
-    // Ejecutar la consulta SQL con el ID del administrador como parámetro
+    `;
+
     const [result] = await pool.query(sql, [admin_id]);
 
-    // Verificar si se encontraron actividades
     if (result.length > 0) {
-      // Devolver las actividades encontradas en formato JSON
-      res.status(200).json(result);
+      return res.status(200).json(result);
     } else {
-      // Enviar un mensaje si no se encontraron actividades
-      res.status(400).json({
-        mensaje: "No hay actividades que listar",
+      return res.status(404).json({
+        status: 404,
+        message: "No hay actividades que listar",
       });
     }
   } catch (error) {
-    // Capturar errores y enviar un mensaje de error genérico
-    console.error(error);
-    res.status(500).json({
-      mensaje: "Error en el sistema",
+    return res.status(500).json({
+      status: 500,
+      message: "Error en el sistema",
     });
   }
 };
 
 
-
+// Controlador para registrar actividades
 export const RegistrarA = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json(errors);
-    }
-    
     const {
       nombre_actividad,
       tiempo,
       observaciones,
-      fk_id_variedad,
       valor_actividad,
-      estado,
-      fk_id_tipo_recursos // Cambiado a una lista de IDs de tipo de recursos
+      fk_id_variedad,
+      fk_id_tipo_recursos,
+      estado
     } = req.body;
 
-    // Verificar si el campo estado está presente en el cuerpo de la solicitud
-    if (!estado) {
-      return res.status(400).json({
-        status: 400,
-        message: "El campo 'estado' es obligatorio"
-      });
-    }
+    // Validar los campos y realizar otras verificaciones necesarias...
 
-    // Obtener el ID del administrador que realiza la solicitud desde el token
-    const admin_id = req.usuario;
-
-    // Verificar si la variedad existe
-    const [variedadExist] = await pool.query(
-      "SELECT * FROM variedad WHERE id_variedad = ?",
-      [fk_id_variedad]
+    // Insertar la actividad en la tabla Actividad
+    const [result] = await pool.query(
+      "INSERT INTO actividad (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado, admin_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [
+        nombre_actividad,
+        tiempo,
+        observaciones,
+        fk_id_variedad,
+        valor_actividad,
+        estado,
+        req.usuario
+      ]
     );
 
-    if (variedadExist.length === 0) {
-      return res.status(404).json({
-        status: 404,
-        message: "La variedad no existe. Registre primero una variedad.",
-      });
-    }
+    const actividadId = result.insertId;
 
-    // Verificar si los tipos de recurso existen
-    for (const tipoRecursoId of fk_id_tipo_recursos) {
-      const [tipoRecursoExist] = await pool.query(
-        "SELECT * FROM tipo_recursos WHERE id_tipo_recursos = ?",
-        [tipoRecursoId]
-      );
-
-      if (tipoRecursoExist.length === 0) {
-        return res.status(404).json({
-          status: 404,
-          message: `El tipo de recurso con ID ${tipoRecursoId} no existe.`,
-        });
-      }
-    }
-
-    // Inserción de la nueva actividad con las claves foráneas fk_id_tipo_recursos
+    // Insertar los tipos de recursos asociados a la actividad en la tabla de relación
     for (const tipoRecursoId of fk_id_tipo_recursos) {
       await pool.query(
-        "INSERT INTO actividad (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado, admin_id, fk_id_tipo_recursos) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          nombre_actividad,
-          tiempo,
-          observaciones,
-          fk_id_variedad,
-          valor_actividad,
-          estado,
-          admin_id,
-          tipoRecursoId // Añadido el tipoRecursoId actual al array de valores para la inserción
-        ]
+        "INSERT INTO actividad_tipo_recursos (fk_id_actividad, fk_id_tipo_recursos) VALUES (?, ?)",
+        [actividadId, tipoRecursoId]
       );
     }
 
     return res.status(200).json({
       status: 200,
-      message: "Se registraron las actividades con éxito",
+      message: "Se registró la actividad con éxito",
     });
   } catch (error) {
     return res.status(500).json({
@@ -131,6 +101,8 @@ export const RegistrarA = async (req, res) => {
     });
   }
 };
+
+
 
 
 /* export const RegistrarA = async (req, res) => {
@@ -238,74 +210,77 @@ export const ActualizarA = async (req, res) => {
       fk_id_variedad,
       valor_actividad,
       estado,
-      fk_id_tipo_recursos, // Agregar fk_id_tipo_recursos al destructuring
+      fk_id_tipo_recursos,
     } = req.body;
-
-    // Verifica si al menos uno de los campos está presente en la solicitud
-    if (
-      !nombre_actividad &&
-      !tiempo &&
-      !observaciones &&
-      !fk_id_variedad &&
-      !valor_actividad &&
-      !estado &&
-      !fk_id_tipo_recursos // Agregar fk_id_tipo_recursos a la condición
-    ) {
-      return res.status(400).json({
-        message:
-          "Al menos uno de los campos (nombre_actividad, tiempo, observaciones, fk_id_variedad, valor_actividad, estado, fk_id_tipo_recursos) debe estar presente en la solicitud para realizar la actualización.",
-      });
-    }
 
     // Obtener el ID del administrador que realiza la solicitud desde el token
     const admin_id = req.usuario;
 
-    // Verificar si la actividad a actualizar pertenece al administrador que está realizando la solicitud
-    const [oldActividad] = await pool.query(
-      "SELECT * FROM actividad WHERE id_actividad=? AND admin_id=?",
-      [id, admin_id]
-    );
-
-    if (oldActividad.length === 0) {
-      return res.status(404).json({
-        status: 404,
-        message: "Actividad no encontrada o no autorizada para actualizar",
-      });
-    }
+    // Iniciar la transacción
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
 
     // Realizar la actualización en la base de datos
-    const [result] = await pool.query(
+    await connection.query(
       `UPDATE actividad
       SET 
-      nombre_actividad = ${nombre_actividad ? `'${nombre_actividad}'` : "nombre_actividad"},
-      tiempo = ${tiempo !== undefined ? `'${tiempo}'` : "tiempo"},
-      observaciones = ${observaciones ? `'${observaciones}'` : "observaciones"},
-      fk_id_variedad = ${fk_id_variedad ? `'${fk_id_variedad}'` : "fk_id_variedad"},
-      valor_actividad = ${valor_actividad ? `'${valor_actividad}'` : "valor_actividad"},
-      estado = ${estado ? `'${estado}'` : "estado"},
-      fk_id_tipo_recursos = ${fk_id_tipo_recursos ? `'${fk_id_tipo_recursos}'` : "fk_id_tipo_recursos"}
-      WHERE id_actividad = ${id}`
+        nombre_actividad = ?,
+        tiempo = ?,
+        observaciones = ?,
+        fk_id_variedad = ?,
+        valor_actividad = ?,
+        estado = ?
+      WHERE id_actividad = ? AND admin_id = ?`,
+      [
+        nombre_actividad,
+        tiempo,
+        observaciones,
+        fk_id_variedad,
+        valor_actividad,
+        estado,
+        id,
+        admin_id,
+      ]
     );
-    
 
-    if (result.affectedRows > 0) {
-      res.status(200).json({
-        status: 200,
-        message: "Actividad actualizada con éxito",
-      });
-    } else {
-      res.status(403).json({
-        status: 403,
-        message: "No se pudo actualizar la actividad",
-      });
+    // Eliminar los tipos de recursos asociados existentes
+    await connection.query(
+      "DELETE FROM actividad_tipo_recursos WHERE fk_id_actividad = ?",
+      [id]
+    );
+
+    // Insertar los nuevos tipos de recursos asociados a la actividad en la tabla de relación
+    for (const tipoRecursoId of fk_id_tipo_recursos) {
+      await connection.query(
+        "INSERT INTO actividad_tipo_recursos (fk_id_actividad, fk_id_tipo_recursos) VALUES (?, ?)",
+        [id, tipoRecursoId]
+      );
     }
+
+    // Realizar commit de la transacción
+    await connection.commit();
+
+    // Liberar la conexión
+    connection.release();
+
+    return res.status(200).json({
+      status: 200,
+      message: "Actividad actualizada con éxito",
+    });
   } catch (error) {
-    res.status(500).json({
+    // Si hay un error, realizar rollback de la transacción
+    await connection.rollback();
+
+    // Liberar la conexión
+    connection.release();
+
+    return res.status(500).json({
       status: 500,
       message: error.message || "Error en el sistema",
     });
   }
 };
+
 
 
 
