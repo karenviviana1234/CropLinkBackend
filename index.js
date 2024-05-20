@@ -28,7 +28,7 @@ servidor.listen(3000, () =>{
 
 //rutas
 servidor.use(rutaValidacion)
-servidor.use('/usuarios',rutaUsuario)
+servidor.use('/usuario',rutaUsuario)
 servidor.use(Rutainversiones)
 servidor.use(rutalote)
 servidor.use(rutaProgramacion)
