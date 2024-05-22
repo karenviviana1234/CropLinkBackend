@@ -10,7 +10,7 @@ const rutaDeEmpleado = Router()
 //localhost:3000/empleado
  rutaDeEmpleado.get("/Listar",validarToken, listarEmpleado); 
 rutaDeEmpleado.put("/EmpleadoMood/Registrar/:id",validarToken,validarRR, RegistrarE);
-rutaDeEmpleado.put("/cambioestado/:identificacion",  Empleado);
+rutaDeEmpleado.put("/cambioestado/:id_actividad",  Empleado);
 
 
 export  {rutaDeEmpleado} ;

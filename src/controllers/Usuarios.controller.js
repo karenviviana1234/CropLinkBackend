@@ -237,25 +237,44 @@ export const desactivarUsuario = async (req, res) => {
     }
 };
 
-//listar todos los usuarios
- /*  export const listarUsuarios = async (req, res) => {
+//listar perfil
+
+export const perfil = async (req, res) => {
     try {
-        const [result] = await pool.query('SELECT * FROM usuarios');
-        if (result.length > 0) {
-            res.status(200).json(result);
-        } else {
-            res.status(404).json({
-                status: 404,
-                message: 'No se encontraron usuarios registrados'
-            });
-        }
-    } catch (error) {
-        res.status(500).json({
-            status: 500,
-            message: 'Error en el sistema',
-            error: error.message // Se agrega el mensaje de error separado
+      // Obtener la identificación del usuario autenticado desde el token
+      const identificacion = req.usuario;
+  
+      // Consulta para obtener la información específica del usuario
+      const [result] = await pool.query(`
+        SELECT  
+            u.nombre,
+            u.identificacion,
+            u.apellido,
+            u.correo,
+            u.rol
+        FROM 
+            usuarios u
+        WHERE 
+            u.identificacion = ?;
+      `, [identificacion]);
+  
+      // Verificar si se encontró el usuario
+      if (result.length > 0) {
+        res.status(200).json({
+          status: 200,
+          data: result[0]  // Enviar la información del usuario
         });
+      } else {
+        res.status(404).json({
+          status: 404,
+          message: 'No se encontró la información del usuario'
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: 500,
+        message: 'Error en el sistema: ' + error.message
+      });
     }
-};
- */
- 
+  };
+  
