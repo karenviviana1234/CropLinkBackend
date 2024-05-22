@@ -14,3 +14,4 @@ rutaUsuario.get('/buscarUsuarios/:identificacion',validarToken, buscarUsuario);
 
 rutaUsuario.post('/registrarEmple', validarToken,registrarEmpleados);
 export default rutaUsuario;
+    
