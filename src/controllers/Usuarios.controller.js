@@ -278,5 +278,3 @@ export const perfil = async (req, res) => {
     }
   };
   
-
- 
