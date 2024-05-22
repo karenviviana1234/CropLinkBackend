@@ -122,8 +122,103 @@ export const RegistrarE = async (req, res) => {
 };
  
 //
+export const Empleado = async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+  
+      const { id } = req.params;
+  
+      // Obtener la identificación del usuario autenticado
+      const identificacion = req.usuario;
+  
+      // Verificar si la actividad existe en la tabla programacion y está asignada al usuario
+      const [programacionExist] = await pool.query(
+        "SELECT * FROM programacion WHERE fk_id_actividad = ? AND fk_identificacion = ?",
+        [id, identificacion]
+      );
+  
+      // Verificar si se encontró la actividad asignada al usuario en la tabla programacion
+      if (programacionExist.length > 0) {
+        // Verificar si la actividad existe en la tabla actividad
+        const [oldActividad] = await pool.query(
+          "SELECT * FROM actividad WHERE id_actividad = ?",
+          [id]
+        );
+  
+        if (oldActividad.length > 0) {
+          // Determinar el nuevo estado
+          let nuevoEstado;
+          switch (oldActividad[0].estado) {
+            case 'activo':
+              nuevoEstado = 'proceso';
+              break;
+            case 'proceso':
+              nuevoEstado = 'terminado';
+              break;
+            case 'terminado':
+              nuevoEstado = 'terminado'; // No hay siguiente estado después de terminado
+              break;
+            default:
+              nuevoEstado = oldActividad[0].estado;
+          }
+  
+          // Actualizar el estado de la actividad en la base de datos
+          const [resultActividad] = await pool.query(
+            "UPDATE actividad SET estado = ? WHERE id_actividad = ?",
+            [nuevoEstado, id]
+          );
+  
+          // Actualizar el estado en la tabla programacion
+          const [resultProgramacion] = await pool.query(
+            "UPDATE programacion SET estado = ? WHERE fk_id_actividad = ?",
+            [nuevoEstado, id]
+          );
+  
+          // Verificar si se afectaron filas en ambas tablas
+          if (resultActividad.affectedRows > 0 && resultProgramacion.affectedRows > 0) {
+            // Si se actualizó correctamente en ambas tablas, enviar una respuesta con estado 200
+            res.status(200).json({
+              status: 200,
+              message: 'Estado de la actividad y de la programación actualizados con éxito',
+              nuevoEstado: nuevoEstado
+            });
+          } else {
+            // Si no se encontró el registro para actualizar en alguna de las tablas, enviar una respuesta con estado 404
+            res.status(404).json({
+              status: 404,
+              message: 'No se encontró la actividad o la programación para actualizar'
+            });
+          }
+        } else {
+          // Si no se encontró la actividad en la tabla actividad, enviar una respuesta con estado 404
+          res.status(404).json({
+            status: 404,
+            message: 'No se encontró la actividad'
+          });
+        }
+      } else {
+        // Si no se encontró la actividad asignada al usuario en la tabla programacion, enviar una respuesta con estado 404
+        res.status(404).json({
+          status: 404,
+          message: 'No se encontró la actividad asignada al usuario en la tabla programación'
+        });
+      }
+    } catch (error) {
+      // Si hay algún error en el proceso, enviar una respuesta con estado 500
+      res.status(500).json({
+        status: 500,
+        message: 'Error en el sistema: ' + error.message
+      });
+    }
+  };
+  
+  
+  
 
-//para cambiar los estados y este va para los botones
+/* //para cambiar los estados y este va para los botones
 export const Empleado = async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -194,4 +289,4 @@ export const Empleado = async (req, res) => {
         });
     }
 };
- 
+  */
