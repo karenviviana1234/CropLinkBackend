@@ -117,7 +117,7 @@ export const listarProgramacion = async (req, res) => {
         u.nombre AS usuario,
         a.nombre_actividad,
         v.nombre_variedad,
-        l.nombre AS lote,
+    
         p.estado
     FROM 
         programacion AS p
@@ -127,8 +127,7 @@ export const listarProgramacion = async (req, res) => {
         actividad AS a ON p.fk_id_actividad = a.id_actividad
     JOIN 
         variedad AS v ON a.fk_id_variedad = v.id_variedad
-    JOIN 
-        lotes AS l ON p.fk_id_cultivo = l.id_lote
+
     WHERE 
         u.admin_id = ?;
     `;
