@@ -13,8 +13,8 @@ export const registrarProgramacion = async (req, res) => {
       fecha_fin,
       fk_identificacion,
       fk_id_actividad,
-      //fk_id_cultivo,
       fk_id_variedad, // Agregado fk_id_variedad
+      fk_id_cultivo,
       estado
     } = req.body;
 
@@ -50,7 +50,7 @@ export const registrarProgramacion = async (req, res) => {
       });
     }
 
-  /*   // Verificar si el cultivo existe
+     // Verificar si el cultivo existe
     const [cultivoExist] = await pool.query(
       "SELECT * FROM cultivo WHERE id_cultivo = ?",
       [fk_id_cultivo]
@@ -61,7 +61,7 @@ export const registrarProgramacion = async (req, res) => {
         message: "El cultivo no existe. Registre primero un cultivo."
       });
     }
- */
+ 
     // Verificar si la variedad existe
     const [variedadExist] = await pool.query(
       "SELECT * FROM variedad WHERE id_variedad = ?", // Verificar la tabla de variedades
@@ -76,8 +76,8 @@ export const registrarProgramacion = async (req, res) => {
 
     // Insertar la programación
     const [result] = await pool.query(
-      "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_variedad, admin_id) VALUES (?,?,?,?,?,?,?)",
-      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad,  fk_id_variedad, adminId]
+      "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_variedad, fk_id_cultivo,admin_id) VALUES (?,?,?,?,?,?,?,?)",
+      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad,  fk_id_variedad, fk_id_cultivo,adminId]
     );
 
     if (result.affectedRows > 0) {
@@ -117,7 +117,7 @@ export const listarProgramacion = async (req, res) => {
         u.nombre AS usuario,
         a.nombre_actividad,
         v.nombre_variedad,
-    
+        l.nombre AS lote,
         p.estado
     FROM 
         programacion AS p
@@ -127,7 +127,10 @@ export const listarProgramacion = async (req, res) => {
         actividad AS a ON p.fk_id_actividad = a.id_actividad
     JOIN 
         variedad AS v ON a.fk_id_variedad = v.id_variedad
-
+    JOIN
+        cultivo AS c ON p.fk_id_cultivo = c.id_cultivo
+    JOIN
+        lotes AS l ON c.fk_id_lote = l.id_lote
     WHERE 
         u.admin_id = ?;
     `;
@@ -154,17 +157,20 @@ export const listarProgramacion = async (req, res) => {
 //actualizar
 export const actualizarProgramacion = async (req, res) => {
   try {
+    // Validar los errores de la solicitud
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json(errors);
     }
 
+    // Obtener el id de la programación desde los parámetros de la solicitud
     const { id } = req.params;
     const {
       fecha_inicio,
       fecha_fin,
       fk_identificacion,
       fk_id_actividad,
+      fk_id_variedad, // Agregado fk_id_variedad
       fk_id_cultivo,
       estado
     } = req.body;
@@ -208,16 +214,29 @@ export const actualizarProgramacion = async (req, res) => {
       });
     }
 
+    // Verificar si la variedad existe
+    const [variedadExist] = await pool.query(
+      "SELECT * FROM variedad WHERE id_variedad = ?",
+      [fk_id_variedad]
+    );
+    if (variedadExist.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: "La variedad no existe. Registre primero una variedad.",
+      });
+    }
+
     // Actualizar la programación
     const [result] = await pool.query(
       `UPDATE programacion 
-            SET fecha_inicio = ?, fecha_fin = ?, fk_identificacion = ?, fk_id_actividad = ?, fk_id_cultivo = ?, estado = ? 
+            SET fecha_inicio = ?, fecha_fin = ?, fk_identificacion = ?, fk_id_actividad = ?, fk_id_variedad = ?, fk_id_cultivo = ?, estado = ? 
             WHERE id_programacion = ? AND fk_identificacion = ?`,
       [
         fecha_inicio,
         fecha_fin,
         fk_identificacion,
         fk_id_actividad,
+        fk_id_variedad, // Incluido en el set de actualización
         fk_id_cultivo,
         estado,
         id,
@@ -243,6 +262,7 @@ export const actualizarProgramacion = async (req, res) => {
     });
   }
 };
+
 
 
 
