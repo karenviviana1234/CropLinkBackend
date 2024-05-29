@@ -14,7 +14,7 @@ export const registrarProgramacion = async (req, res) => {
       fk_identificacion,
       fk_id_actividad,
       fk_id_variedad, // Agregado fk_id_variedad
-      fk_id_cultivo,
+      fk_id_lote,
       estado
     } = req.body;
 
@@ -50,15 +50,15 @@ export const registrarProgramacion = async (req, res) => {
       });
     }
 
-     // Verificar si el cultivo existe
+     // Verificar si el lote existe
     const [cultivoExist] = await pool.query(
-      "SELECT * FROM cultivo WHERE id_cultivo = ?",
-      [fk_id_cultivo]
+      "SELECT * FROM lotes WHERE id_lote = ?",
+      [fk_id_lote]
     );
     if (cultivoExist.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "El cultivo no existe. Registre primero un cultivo."
+        message: "El lote no existe. Registre primero un lote."
       });
     }
  
@@ -76,8 +76,8 @@ export const registrarProgramacion = async (req, res) => {
 
     // Insertar la programación
     const [result] = await pool.query(
-      "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_variedad, fk_id_cultivo,admin_id) VALUES (?,?,?,?,?,?,?,?)",
-      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad,  fk_id_variedad, fk_id_cultivo,adminId]
+      "INSERT INTO programacion (fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad, fk_id_variedad, fk_id_lote ,admin_id) VALUES (?,?,?,?,?,?,?,?)",
+      [fecha_inicio, fecha_fin, estado, fk_identificacion, fk_id_actividad,  fk_id_variedad, fk_id_lote,adminId]
     );
 
     if (result.affectedRows > 0) {
@@ -128,9 +128,7 @@ export const listarProgramacion = async (req, res) => {
     JOIN 
         variedad AS v ON a.fk_id_variedad = v.id_variedad
     JOIN
-        cultivo AS c ON p.fk_id_cultivo = c.id_cultivo
-    JOIN
-        lotes AS l ON c.fk_id_lote = l.id_lote
+        lotes AS l ON p.fk_id_lote = l.id_lote
     WHERE 
         u.admin_id = ?;
     `;
@@ -171,7 +169,7 @@ export const actualizarProgramacion = async (req, res) => {
       fk_identificacion,
       fk_id_actividad,
       fk_id_variedad, // Agregado fk_id_variedad
-      fk_id_cultivo,
+      fk_id_lote,
       estado
     } = req.body;
 
@@ -204,13 +202,13 @@ export const actualizarProgramacion = async (req, res) => {
 
     // Verificar si el cultivo existe
     const [cultivoExist] = await pool.query(
-      "SELECT * FROM cultivo WHERE id_cultivo = ?",
-      [fk_id_cultivo]
+      "SELECT * FROM lotes WHERE id_lote = ?",
+      [fk_id_lote]
     );
     if (cultivoExist.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: "El cultivo no existe. Registre primero un cultivo.",
+        message: "El lote no existe. Registre primero un lote.",
       });
     }
 
@@ -237,7 +235,7 @@ export const actualizarProgramacion = async (req, res) => {
         fk_identificacion,
         fk_id_actividad,
         fk_id_variedad, // Incluido en el set de actualización
-        fk_id_cultivo,
+        fk_id_lote,
         estado,
         id,
         fk_identificacion,
@@ -268,8 +266,6 @@ export const actualizarProgramacion = async (req, res) => {
 
 
 // CRUD - Estado
-
-
 export const estadoProgramacion = async (req, res) => {
   try {
     const { id } = req.params;
@@ -362,7 +358,7 @@ JOIN
 JOIN 
     variedad AS v ON a.fk_id_variedad = v.id_variedad
 JOIN 
-    lotes AS l ON p.fk_id_cultivo = l.id_lote
+    lotes AS l ON p.fk_id_lote = l.id_lote
       WHERE 
         p.id_programacion = ?;
     `, [id]);

@@ -220,6 +220,19 @@ export const ActualizarA = async (req, res) => {
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
+    // Consultar los valores actuales de la actividad
+    const [oldActivity] = await connection.query('SELECT * FROM actividad WHERE id_actividad = ?', [id]);
+
+    // Preparar los valores para la actualización
+    const updateValues = {
+      nombre_actividad: nombre_actividad ? nombre_actividad : oldActivity[0].nombre_actividad,
+      tiempo: tiempo ? tiempo : oldActivity[0].tiempo,
+      observaciones: observaciones ? observaciones : oldActivity[0].observaciones,
+      fk_id_variedad: fk_id_variedad ? fk_id_variedad : oldActivity[0].fk_id_variedad,
+      valor_actividad: valor_actividad ? valor_actividad : oldActivity[0].valor_actividad,
+      estado: estado ? estado : oldActivity[0].estado,
+    };
+
     // Realizar la actualización en la base de datos
     await connection.query(
       `UPDATE actividad
@@ -232,12 +245,12 @@ export const ActualizarA = async (req, res) => {
         estado = ?
       WHERE id_actividad = ? AND admin_id = ?`,
       [
-        nombre_actividad,
-        tiempo,
-        observaciones,
-        fk_id_variedad,
-        valor_actividad,
-        estado,
+        updateValues.nombre_actividad,
+        updateValues.tiempo,
+        updateValues.observaciones,
+        updateValues.fk_id_variedad,
+        updateValues.valor_actividad,
+        updateValues.estado,
         id,
         admin_id,
       ]

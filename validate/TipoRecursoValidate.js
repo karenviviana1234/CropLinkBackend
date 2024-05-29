@@ -2,7 +2,7 @@ import { check, body } from 'express-validator';
 
 // Validaciones para el registro de Tipo de Recurso
 export const validarRer = [
-    check('nombre_recursos', 'El nombre del recurso es obligatorio y debe tener máximo 60 caracteres')
+    check('nombre_recursos', 'El nombre del recurso es obligatorio y debe tener máximo 20 caracteres')
     .not().isEmpty().isLength({ max: 20 }),
 
     check('cantidad_medida', 'La cantidad de medida es obligatoria y debe ser un número válido')
