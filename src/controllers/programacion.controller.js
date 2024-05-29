@@ -227,7 +227,7 @@ export const actualizarProgramacion = async (req, res) => {
     // Actualizar la programación
     const [result] = await pool.query(
       `UPDATE programacion 
-            SET fecha_inicio = ?, fecha_fin = ?, fk_identificacion = ?, fk_id_actividad = ?, fk_id_variedad = ?, fk_id_cultivo = ?, estado = ? 
+            SET fecha_inicio = ?, fecha_fin = ?, fk_identificacion = ?, fk_id_actividad = ?, fk_id_variedad = ?, fk_id_lote = ?, estado = ? 
             WHERE id_programacion = ? AND fk_identificacion = ?`,
       [
         fecha_inicio,
@@ -290,27 +290,19 @@ export const estadoProgramacion = async (req, res) => {
       });
     }
 
-    // Consulta el estado actual del cultivo asociado a la programación
-    const [cultivo] = await pool.query("SELECT estado FROM cultivo WHERE id_cultivo = (SELECT fk_id_cultivo FROM programacion WHERE id_programacion = ?)", [id]);
+    // Consulta el estado actual de la programación
+    const [programacion] = await pool.query("SELECT estado FROM programacion WHERE id_programacion = ?", [id]);
 
-    // Verifica si se encontró el cultivo asociado
-    if (cultivo.length === 0) {
+    // Verifica si se encontró la programación
+    if (programacion.length === 0) {
       return res.status(404).json({
         status: 404,
-        message: 'No se pudo encontrar el cultivo asociado a la programación',
-      });
-    }
-
-    // Verifica si el cultivo asociado está activo
-    if (cultivo[0].estado === 'inactivo') {
-      return res.status(400).json({
-        status: 400,
-        message: 'No se puede cambiar el estado de la programación porque el cultivo asociado está inactivo',
+        message: 'No se pudo encontrar la programación',
       });
     }
 
     // Determina el nuevo estado
-    const nuevoEstado = estado || (cultivo[0].estado === 'activo' ? 'inactivo' : 'activo');
+    const nuevoEstado = estado || (programacion[0].estado === 'activo' ? 'inactivo' : 'activo');
 
     // Actualiza el estado de la programación
     const [result] = await pool.query("UPDATE programacion SET estado = ? WHERE id_programacion = ?", [nuevoEstado, id]);
@@ -333,6 +325,8 @@ export const estadoProgramacion = async (req, res) => {
     });
   }
 };
+
+
 
 
 // CRUD -buscar
