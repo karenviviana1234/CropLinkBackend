@@ -83,6 +83,45 @@
     </td></tr>
     <tr><td>Programador</td> <td>Daniel F Gonzalez - devdfg</td></tr>
     </table>
+    <h3>Requerimiento 3. Documentacion ENDPOINT DESACTIVAR ACTIVIDAD</h3>
+    <table>
+        <tr><td>Número</td> <td>3</td></tr>
+        <tr><td>Nombre del Servicio</td>  <td>Desactivar Finca</td></tr>
+        <tr><td>URL</td>  <td>/desactivarRecurso/:id</td></tr>
+        <tr><td>Descripción</td>  <td>Permite desactivar una finca existente en la base de datos por medio de su id</td></tr>
+        <tr><td>Metodo HTTP</td>  <td>PUT</td></tr>
+        <tr><td>Header</td>  <td>Token:token</td></tr>
+        <tr><td>Usuario</td> <td>Administrador</td></tr>
+        <tr><td>Request json</td>  <td></td></tr>
+        <tr><td>Respuesta json</td>  <td>   
+        Correcto: 
+        Status: 200
+        json:
+        {
+            "status": 200,
+            "message": `Se cambió el estado del recurso a '$' con éxito`
+            
+        }
+    <br>
+    Incorrecto:
+    
+    Status: 404
+    body:{
+        "status": 404,
+        "message" :  'No se encontró el recurso con el ID especificado'
+    }
+    <br>
+    Error: 
+    
+    Status: 500 
+    json: {
+        "status": 500,
+        "message" : "Error en el sistema"
+    }
+    </td></tr>
+    <tr><td>Programador</td> <td>Daniel F Gonzalez - devdfg</td></tr>
+    </table>
+    <br>
     <h3>Requerimiento 3. Documentacion ENDPOINT BUSCAR TIPO RECURSO</h3>
     <table>
         <tr><td>Número</td> <td>3</td></tr>
@@ -99,12 +138,11 @@
         json:
         [
         {
-            "nombre_actividad": "fumigare",
-            "tiempo": "04:12:11",
-            "observaciones": "hol apa",
-            "valor_actividad": 13213,
-            "id_variedad": 1,
-            "nombre_variedad": "cilantro"
+            "nombre_recursos":"veneno",
+            "cantidad_medida":12, 
+            "unidades_medidas":"ml",
+            "extras":"mensaje opcional,
+            "estado":"activo"
         }
         ]
     <br>
@@ -142,20 +180,18 @@
         json:
         [
         {
-            "nombre_actividad": "fumigare",
-            "tiempo": "04:12:11",
-            "observaciones": "hol apa",
-            "valor_actividad": 13213,
-            "id_variedad": 1,
-            "nombre_variedad": "cilantro"
+            "nombre_recursos":"veneno",
+            "cantidad_medida":12, 
+            "unidades_medidas":"ml",
+            "extras":"mensaje opcional,
+            "estado":"activo"
         },
         {
-            "nombre_actividad": "guada",
-            "tiempo": "04:22:04",
-            "observaciones": "hoy no",
-            "valor_actividad": 13213,
-            "id_variedad": 1,
-            "nombre_variedad": "cilantro"
+            "nombre_recursos":"pala",
+            "cantidad_medida":1, 
+            "unidades_medidas":"unidad",
+            "extras":"mensaje opcional,
+            "estado":"inactivo"
         }
         ]
     <br>
