@@ -6,7 +6,11 @@
     <title>Documentación de la API</title>
 </head>
 <body>
-<h3>ACTIVIDAD</h3>
+
+    <h1>ACTIVIDAD</h1>
+    <br>
+
+    <h3>Requerimiento 1. Documentacion ENDPOINT REGISTRAR ACTIVIDAD</h3>
     <table>
         <tr><td>Número</td> <td>1</td></tr>
         <tr><td>Nombre del Servicio</td> <td>Registrar la actividad</td></tr>
@@ -20,6 +24,7 @@
             "tiempo":"10:20:50", 
             "observaciones":"bien", 
             "fk_id_variedad":1,
+            fk_id_tipo_recursos:2,1,
              "valor_actividad":8000
              
         }</td></tr>
@@ -66,6 +71,7 @@
             "observaciones":"bien", 
             "fk_id_variedad":1,
              "valor_actividad":8000,
+             "fk_id_tipo_recursos":1,
              "estado":"activo"
         }</td></tr>
         <tr><td>Respuesta json</td>  <td>   
@@ -74,7 +80,7 @@
         json:
         {
             "status": 200,
-            "message": "Se actualizó con éxito"
+            "message": "Actividad actualizada con éxito"
         }
     <br>
     Incorrecto:
@@ -156,6 +162,7 @@
             "observaciones": "bien",
             "valor_actividad": 8000,
             "nombre_variedad": "cilantro",
+            fk_id_tipo_recursos":1,
             "estado": "inactivo",
             
         }
@@ -201,6 +208,7 @@
             "observaciones": "bien",
             "valor_actividad": 8000,
             "nombre_variedad": "cilantro",
+            "recursos":1,
             "estado": "terminado"
             
         },
@@ -211,6 +219,7 @@
             "observaciones": "bien",
             "valor_actividad": 8000,
             "nombre_variedad": "cilantro",
+            "recursos":13,2,
             "estado": "activo"
             
         },

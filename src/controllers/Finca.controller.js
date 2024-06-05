@@ -76,7 +76,7 @@ export const ActualizarFinca = async (req, res) => {
             return res.status(400).json(errors);
         }
 
-        const { id } = req.params;
+        const { id_finca } = req.params;
         const { nombre_finca, longitud, latitud } = req.body;
 
         // Obtener la identificación del administrador desde el token
@@ -88,12 +88,12 @@ export const ActualizarFinca = async (req, res) => {
         }
 
         // Consulta la finca existente para obtener su estado actual
-        const [oldFinca] = await pool.query("SELECT * FROM finca WHERE id_finca=?", [id]);
+        const [oldFinca] = await pool.query("SELECT * FROM finca WHERE id_finca=?", [id_finca]);
 
         // Actualiza la finca con los valores proporcionados y el admin_id del usuario autenticado
         const [result] = await pool.query(
             `UPDATE finca SET nombre_finca=?, longitud=?, latitud=?, admin_id=? WHERE id_finca=?`,
-            [nombre_finca || oldFinca[0].nombre_finca, longitud || oldFinca[0].longitud, latitud || oldFinca[0].latitud, admin_id, id]
+            [nombre_finca || oldFinca[0].nombre_finca, longitud || oldFinca[0].longitud, latitud || oldFinca[0].latitud, admin_id, id_finca]
         );
 
         if (result.affectedRows > 0) {
@@ -121,8 +121,8 @@ export const ActualizarFinca = async (req, res) => {
 // CRUD - Buscar
 export const BuscarFinca = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [result] = await pool.query("SELECT * FROM finca WHERE id_finca =?", [id]);
+        const { id_finca } = req.params;
+        const [result] = await pool.query("SELECT * FROM finca WHERE id_finca =?", [id_finca]);
 
         if (result.length > 0) {
             res.status(200).json(result);
@@ -142,13 +142,13 @@ export const BuscarFinca = async (req, res) => {
 
 export const desactivarF = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id_finca } = req.params;
 
         // Inicia una transacción
         await pool.query("START TRANSACTION");
 
         // Consulta la finca por su ID
-        const [finca] = await pool.query("SELECT * FROM finca WHERE id_finca = ?", [id]);
+        const [finca] = await pool.query("SELECT * FROM finca WHERE id_finca = ?", [id_finca]);
 
         // Verifica si se encontró la finca
         if (finca.length === 0) {
@@ -168,18 +168,20 @@ export const desactivarF = async (req, res) => {
         }
 
         // Actualiza el estado de la finca
-        await pool.query("UPDATE finca SET estado = ? WHERE id_finca = ?", [nuevoEstado, id]);
+        await pool.query("UPDATE finca SET estado = ? WHERE id_finca = ?", [nuevoEstado, id_finca]);
 
         // Actualiza el estado de los lotes relacionados
-        await pool.query("UPDATE lotes SET estado = ? WHERE fk_id_finca = ?", [nuevoEstado, id]);
+        await pool.query("UPDATE lotes SET estado = ? WHERE fk_id_finca = ?", [nuevoEstado, id_finca]);
 
         // Actualiza el estado de los cultivos relacionados
-        await pool.query("UPDATE cultivo SET estado = ? WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?)", [nuevoEstado, id]);
+        await pool.query("UPDATE cultivo SET estado = ? WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?)", [nuevoEstado, id_finca]);
 
-        // Actualiza el estado de la programación relacionada
-        await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_cultivo IN (SELECT id_cultivo FROM cultivo WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?))", [nuevoEstado, id]);
+        // Actualiza el estado de las programaciones relacionadas
+        await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?)", [nuevoEstado, id_finca]);
 
-    
+        // Actualiza el estado de las actividades relacionadas
+        await pool.query("UPDATE actividad SET estado = ? WHERE id_actividad IN (SELECT fk_id_actividad FROM programacion WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?))", [nuevoEstado, id_finca]);
+
         // Confirma la transacción
         await pool.query("COMMIT");
 
@@ -195,4 +197,5 @@ export const desactivarF = async (req, res) => {
             message: error.message || 'Error en el sistema',
         });
     }
-}
+};
+

@@ -9,9 +9,9 @@ const router = Router();
 
 router.get("/listarFinca", validarToken, listarFinca);
 router.post("/RegistroFinca", validarToken,  validarFincaR,  RegistroFinca);
-router.put("/actualizarFinca/:id", validarToken,  validarFincaA,  ActualizarFinca);
-router.get("/buscarFinca/:id",  BuscarFinca);
-router.put("/desactivarFinca/:id", validarToken,  validarFincaA , desactivarF);
+router.put("/actualizarFinca/:id_finca", validarToken,  validarFincaA,  ActualizarFinca);
+router.get("/buscarFinca/:id_finca",  BuscarFinca);
+router.put("/desactivarFinca/:id_finca", validarToken,  validarFincaA , desactivarF);
 
 export default router;
 //nn
