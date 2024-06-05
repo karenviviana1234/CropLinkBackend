@@ -72,7 +72,7 @@ export const registrarInversiones = async (req, res) => {
             });
         }
 
-        // Verificar si la programación existe y pertenece al admin_id
+        // Verificar si la programación existe y pertenece al adminId
         const [programacionExist] = await pool.query('SELECT * FROM programacion WHERE id_programacion = ? AND admin_id = ?', [fk_id_programacion, adminId]);
 
         if (programacionExist.length === 0) {
@@ -91,7 +91,7 @@ export const registrarInversiones = async (req, res) => {
         const valor_inversion = precio * cantidadMedida;
 
         // Insertar la inversión
-        const [Registrar] = await pool.query('INSERT INTO inversiones (fk_id_programacion, fk_id_costos, valor_inversion,admin_id) VALUES (?, ?, ?,?)', [fk_id_programacion, fk_id_costos, valor_inversion,admin_id]);
+        const [Registrar] = await pool.query('INSERT INTO inversiones (fk_id_programacion, fk_id_costos, valor_inversion, admin_id) VALUES (?, ?, ?, ?)', [fk_id_programacion, fk_id_costos, valor_inversion, adminId]);
 
         if (Registrar.affectedRows > 0) {
             res.status(200).json({
@@ -112,6 +112,7 @@ export const registrarInversiones = async (req, res) => {
         });
     }
 };
+
 
 
 export const actualizarInversiones = async (req, res) => {
