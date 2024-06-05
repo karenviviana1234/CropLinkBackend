@@ -128,7 +128,7 @@ export const listarProgramacion = async (req, res) => {
     JOIN 
         variedad AS v ON a.fk_id_variedad = v.id_variedad
     JOIN 
-        lotes AS l ON p.fk_id_cultivo = l.id_lote
+        lotes AS l ON p.fk_id_lote = l.id_lote
     WHERE 
         u.admin_id = ?;
     `;
@@ -343,7 +343,7 @@ JOIN
 JOIN 
     variedad AS v ON a.fk_id_variedad = v.id_variedad
 JOIN 
-    lotes AS l ON p.fk_id_cultivo = l.id_lote
+    lotes AS l ON p.fk_id_lote = l.id_lote
       WHERE 
         p.id_programacion = ?;
     `, [id]);
