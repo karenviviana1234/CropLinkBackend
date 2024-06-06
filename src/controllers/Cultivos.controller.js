@@ -295,7 +295,7 @@ export const desactivar = async (req, res) => {
       await pool.query("UPDATE cultivo SET estado = ? WHERE id_cultivo = ?", [nuevoEstado, id_cultivo]);
 
       // Actualiza el estado de la programación relacionada
-      await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_cultivo = ?", [nuevoEstado, id_cultivo]);
+    //  await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_cultivo = ?", [nuevoEstado, id_cultivo]);
 
   
       // Confirma la transacción

@@ -173,6 +173,9 @@ export const desactivarF = async (req, res) => {
         // Actualiza el estado de los lotes relacionados
         await pool.query("UPDATE lotes SET estado = ? WHERE fk_id_finca = ?", [nuevoEstado, id_finca]);
 
+        // Actualiza el estado de las variedades relacionadas
+        await pool.query("UPDATE variedad SET estado = ? WHERE id_variedad IN (SELECT fk_id_variedad FROM programacion WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?))", [nuevoEstado, id_finca]);
+    
         // Actualiza el estado de los cultivos relacionados
         await pool.query("UPDATE cultivo SET estado = ? WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_finca = ?)", [nuevoEstado, id_finca]);
 

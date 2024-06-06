@@ -13,7 +13,7 @@ export const listarInversiones = async (req, res) => {
                 cu.id_cultivo,
                 cu.fecha_inicio AS fecha_siembra_cultivo,
                 cu.cantidad_sembrada,
-                v.nombre_variedad    AS nombre_variedad,
+                v.nombre_variedad AS nombre_variedad,
                 pro.fecha_inicio AS pro_fecha_inicio, 
                 pro.fecha_fin AS pro_fecha_fin, 
                 inver.fk_id_programacion AS id_programacion, 
@@ -23,14 +23,14 @@ export const listarInversiones = async (req, res) => {
                 SUM(a.valor_actividad) AS valor_actividad, 
                 (c.precio * tr.cantidad_medida + SUM(a.valor_actividad)) AS valor_inversion
             FROM 
-                inversiones AS inver 
-                JOIN programacion AS pro ON inver.fk_id_programacion = pro.id_programacion 
-                JOIN costos AS c ON inver.fk_id_costos = c.id_costos 
-                JOIN tipo_recursos AS tr ON c.fk_id_tipo_recursos = tr.id_tipo_recursos 
-                JOIN actividad AS a ON pro.fk_id_actividad = a.id_actividad
-                JOIN cultivo AS cu ON pro.fk_id_cultivo = cu.id_cultivo
-                JOIN lotes AS l ON cu.fk_id_lote = l.id_lote
+                inversiones AS inver
+                JOIN programacion AS pro ON inver.fk_id_programacion = pro.id_programacion
+                JOIN lotes AS l ON pro.fk_id_lote = l.id_lote
+                JOIN cultivo AS cu ON l.id_lote = cu.fk_id_lote
                 JOIN variedad AS v ON cu.fk_id_variedad = v.id_variedad
+                JOIN costos AS c ON inver.fk_id_costos = c.id_costos
+                JOIN tipo_recursos AS tr ON c.fk_id_tipo_recursos = tr.id_tipo_recursos
+                JOIN actividad AS a ON pro.fk_id_actividad = a.id_actividad
             WHERE 
                 pro.admin_id = ?
             GROUP BY 
@@ -47,6 +47,7 @@ export const listarInversiones = async (req, res) => {
         res.status(500).json({ status: 500, message: 'Error en el servidor: ' + error });
     }
 };
+
 
 
 export const registrarInversiones = async (req, res) => {
@@ -191,37 +192,39 @@ export const BuscarInversiones = async (req, res) => {
         const { id_inversiones } = req.params;
         const consultar = `
         SELECT 
-        inver.id_inversiones AS id_inversiones,
-        l.nombre AS nombre_lote, 
-        cu.id_cultivo,
-        cu.fecha_inicio AS fecha_siembra_cultivo,
-        cu.cantidad_sembrada,
-        v.nombre_variedad    AS nombre_variedad,
-        pro.fecha_inicio AS pro_fecha_inicio, 
-        pro.fecha_fin AS pro_fecha_fin, 
-        inver.fk_id_programacion AS id_programacion, 
-        inver.fk_id_costos AS id_costos, 
-        c.precio AS recur_precio, 
-        tr.cantidad_medida AS recur_cantidad_medida, 
-        SUM(a.valor_actividad) AS valor_actividad, 
-        (c.precio * tr.cantidad_medida + SUM(a.valor_actividad)) AS valor_inversion
-    FROM 
-        inversiones AS inver 
-        JOIN programacion AS pro ON inver.fk_id_programacion = pro.id_programacion 
-        JOIN costos AS c ON inver.fk_id_costos = c.id_costos 
-        JOIN tipo_recursos AS tr ON c.fk_id_tipo_recursos = tr.id_tipo_recursos 
-        JOIN actividad AS a ON pro.fk_id_actividad = a.id_actividad
-        JOIN cultivo AS cu ON pro.fk_id_cultivo = cu.id_cultivo
-        JOIN lotes AS l ON cu.fk_id_lote = l.id_lote
-        JOIN variedad AS v ON cu.fk_id_variedad = v.id_variedad
-            WHERE 
-                inver.id_inversiones = ?`;
+            inver.id_inversiones AS id_inversiones,
+            l.nombre AS nombre_lote, 
+            cu.id_cultivo,
+            cu.fecha_inicio AS fecha_siembra_cultivo,
+            cu.cantidad_sembrada,
+            v.nombre_variedad AS nombre_variedad,
+            pro.fecha_inicio AS pro_fecha_inicio, 
+            pro.fecha_fin AS pro_fecha_fin, 
+            inver.fk_id_programacion AS id_programacion, 
+            inver.fk_id_costos AS id_costos, 
+            c.precio AS recur_precio, 
+            tr.cantidad_medida AS recur_cantidad_medida, 
+            SUM(a.valor_actividad) AS valor_actividad, 
+            (c.precio * tr.cantidad_medida + SUM(a.valor_actividad)) AS valor_inversion
+        FROM 
+            inversiones AS inver 
+            JOIN programacion AS pro ON inver.fk_id_programacion = pro.id_programacion 
+            JOIN lotes AS l ON pro.fk_id_lote = l.id_lote
+            JOIN cultivo AS cu ON l.id_lote = cu.fk_id_lote
+            JOIN variedad AS v ON cu.fk_id_variedad = v.id_variedad
+            JOIN costos AS c ON inver.fk_id_costos = c.id_costos 
+            JOIN tipo_recursos AS tr ON c.fk_id_tipo_recursos = tr.id_tipo_recursos 
+            JOIN actividad AS a ON pro.fk_id_actividad = a.id_actividad
+        WHERE 
+            inver.id_inversiones = ?
+        GROUP BY 
+            inver.id_inversiones`;
         
         const [resultado] = await pool.query(consultar, [id_inversiones]);
 
         if (resultado.length > 0) {
             // Recalcular el valor de inversión
-            resultado[0].valor_inversion = resultado[0].precio * resultado[0].cantidad_medida + resultado[0].suma_actividad;
+            resultado[0].valor_inversion = resultado[0].recur_precio * resultado[0].recur_cantidad_medida + resultado[0].valor_actividad;
             res.status(200).json(resultado[0]);
         } else {
             res.status(404).json({
@@ -237,3 +240,4 @@ export const BuscarInversiones = async (req, res) => {
         });
     }
 };
+

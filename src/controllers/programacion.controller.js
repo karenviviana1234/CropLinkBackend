@@ -290,14 +290,52 @@ export const estadoProgramacion = async (req, res) => {
       });
     }
 
-    // Consulta el estado actual de la programación
-    const [programacion] = await pool.query("SELECT estado FROM programacion WHERE id_programacion = ?", [id]);
+    // Consulta el fk_id_lote y fk_id_actividad de la programación
+    const [programacion] = await pool.query("SELECT estado, fk_id_lote, fk_id_actividad FROM programacion WHERE id_programacion = ?", [id]);
 
     // Verifica si se encontró la programación
     if (programacion.length === 0) {
       return res.status(404).json({
         status: 404,
         message: 'No se pudo encontrar la programación',
+      });
+    }
+
+    // Consulta el estado actual del lote asociado
+    const [lote] = await pool.query("SELECT estado FROM lotes WHERE id_lote = ?", [programacion[0].fk_id_lote]);
+
+    // Verifica si se encontró el lote asociado
+    if (lote.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: 'No se pudo encontrar el lote asociado a la programación',
+      });
+    }
+
+    // Verifica si el lote asociado está activo
+    if (lote[0].estado === 'inactivo') {
+      return res.status(400).json({
+        status: 400,
+        message: 'No se puede cambiar el estado de la programación porque el lote asociado está inactivo',
+      });
+    }
+
+    // Consulta el estado actual de la actividad asociada
+    const [actividad] = await pool.query("SELECT estado FROM actividad WHERE id_actividad = ?", [programacion[0].fk_id_actividad]);
+
+    // Verifica si se encontró la actividad asociada
+    if (actividad.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        message: 'No se pudo encontrar la actividad asociada a la programación',
+      });
+    }
+
+    // Verifica si la actividad asociada está activa
+    if (actividad[0].estado === 'inactivo') {
+      return res.status(400).json({
+        status: 400,
+        message: 'No se puede cambiar el estado de la programación porque la actividad asociada está inactiva',
       });
     }
 
@@ -325,6 +363,7 @@ export const estadoProgramacion = async (req, res) => {
     });
   }
 };
+
 
 
 

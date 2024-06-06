@@ -225,7 +225,7 @@ export const desactivarlote = async (req, res) => {
         await pool.query("UPDATE cultivo SET estado = ? WHERE fk_id_lote = ?", [nuevoEstado, id_lote]);
 
         // Actualiza el estado de la programación relacionada
-        await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_cultivo IN (SELECT id_cultivo FROM cultivo WHERE fk_id_lote = ?)", [nuevoEstado, id_lote]);
+        await pool.query("UPDATE programacion SET estado = ? WHERE fk_id_lote IN (SELECT id_lote FROM lotes WHERE fk_id_lote = ?)", [nuevoEstado, id_lote]);
 
         // Confirma la transacción
         await pool.query("COMMIT");
